@@ -125,3 +125,7 @@ if _csrf_trusted:
 
 # Authentication settings
 LOGIN_URL = '/auth/login/'
+
+# Payment details (used on contact/payment pages)
+ECOCASH_NUMBER = os.getenv("ECOCASH_NUMBER", "0776487550")
+ECOCASH_ACCOUNT_HOLDER = os.getenv("ECOCASH_ACCOUNT_HOLDER", "T. Tayero")

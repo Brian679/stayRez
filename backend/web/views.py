@@ -592,6 +592,7 @@ def property_contact(request, pk):
     from payments.models import AdminFeePayment, PaymentConfirmation, ContactView
     from core.models import Notification
     from django.contrib import messages
+    from django.conf import settings
     
     prop = get_object_or_404(Property, pk=pk)
     
@@ -662,6 +663,8 @@ def property_contact(request, pk):
         "payment_confirmation": payment_confirmation,
         "uses_remaining": active_payment.uses_remaining if active_payment else 0,
         "already_viewed": already_viewed,
+        "ecocash_number": getattr(settings, "ECOCASH_NUMBER", ""),
+        "ecocash_account_holder": getattr(settings, "ECOCASH_ACCOUNT_HOLDER", ""),
     })
 
 
