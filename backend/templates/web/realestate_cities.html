@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+  line-height: 1.5;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+h2 {
+  font-size: clamp(24px, 4vw + 1vh, 42px);
+  font-weight: 700;
+  margin-bottom: clamp(12px, 2vh, 20px);
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: clamp(14px, 2vw + 0.5vh, 18px);
+  color: #666;
+  margin-bottom: clamp(18px, 3vh, 28px);
+}
+
+.filters-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: clamp(18px, 3vh, 28px);
+}
+
+.filter-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #222;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filter-btn:hover {
+  border-color: #222;
+  background: #f7f7f7;
+}
+
+.filter-btn.active {
+  background: #222;
+  border-color: #222;
+  color: #fff;
+}
+
+.cities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.city-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #ebebeb;
+}
+
+.city-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  border-color: #ddd;
+}
+
+.city-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+  background: #eaeaea;
+}
+
+.city-card-content {
+  padding: 16px;
+}
+
+.city-name {
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #222;
+}
+
+.property-count {
+  font-size: 14px;
+  color: #717171;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.city-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.city-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f7f7f7;
+  color: #333;
+  border: 1px solid #eee;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #717171;
+}
+
+.empty-state svg {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  color: #ddd;
+}
+</style>
+
+<div class="content-wrapper">
+  <h2>Explore Real Estate</h2>
+  <p class="subtitle">Find resorts, lodges, and shops for rent in cities across the country</p>
+
+  <div class="filters-bar">
+    <a class="filter-btn {% if filter_type == 'all' %}active{% endif %}" href="?type=all">All</a>
+    <a class="filter-btn {% if filter_type == 'resort' %}active{% endif %}" href="?type=resort">🏖️ Resorts</a>
+    <a class="filter-btn {% if filter_type == 'real_estate' %}active{% endif %}" href="?type=real_estate">🏕️ Lodges</a>
+    <a class="filter-btn {% if filter_type == 'shop' %}active{% endif %}" href="?type=shop">🏪 Shops</a>
+  </div>
+
+  {% if cities %}
+  <div class="cities-grid">
+    {% for city_info in cities %}
+    <a href="{% url 'realestate-properties' %}?city={{ city_info.city.id }}{% if filter_type and filter_type != 'all' %}&subtype={{ filter_type }}{% endif %}" class="city-card">
+      {% if city_info.sample_image %}
+      <img class="city-image" src="{{ city_info.sample_image }}" alt="{{ city_info.city.name }}">
+      {% else %}
+      <img class="city-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e0e0e0' width='400' height='300'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3E{{ city_info.city.name }}%3C/text%3E%3C/svg%3E" alt="{{ city_info.city.name }}">
+      {% endif %}
+
+      <div class="city-card-content">
+        <div class="city-name">{{ city_info.city.name }}</div>
+        <div class="property-count">{{ city_info.count }} listing{{ city_info.count|pluralize }}</div>
+
+        {% if filter_type == 'all' %}
+        <div class="city-tags">
+          {% if city_info.resorts_count %}<span class="city-tag">🏖️ {{ city_info.resorts_count }} Resort{{ city_info.resorts_count|pluralize }}</span>{% endif %}
+          {% if city_info.lodges_count %}<span class="city-tag">🏕️ {{ city_info.lodges_count }} Lodge{{ city_info.lodges_count|pluralize }}</span>{% endif %}
+          {% if city_info.shops_count %}<span class="city-tag">🏪 {{ city_info.shops_count }} Shop{{ city_info.shops_count|pluralize }}</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+    <p style="font-size: clamp(14px, 2vw, 16px);">No real estate properties available yet</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% comment %}
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Airbnb-inspired Real Estate Page */
+body {
+  {% extends "base.html" %}
+
+  {% block content %}
+  <style>
+  body {
+    font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+    background: #fafafa;
+    line-height: 1.5;
+  }
+
+  .content-wrapper {
+    padding-top: calc(10vh + 40px);
+    padding-bottom: 5vh;
+    padding-left: clamp(8px, 4vw, 40px);
+    padding-right: clamp(8px, 4vw, 40px);
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  h2 {
+    font-size: clamp(24px, 4vw + 1vh, 42px);
+    font-weight: 700;
+    margin-bottom: clamp(12px, 2vh, 20px);
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: clamp(14px, 2vw + 0.5vh, 18px);
+    color: #666;
+    margin-bottom: clamp(18px, 3vh, 28px);
+  }
+
+  .filters-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: clamp(18px, 3vh, 28px);
+  }
+
+  .filter-btn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #222;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .filter-btn:hover {
+    border-color: #222;
+    background: #f7f7f7;
+  }
+
+  .filter-btn.active {
+    background: #222;
+    border-color: #222;
+    color: #fff;
+  }
+
+  .cities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: clamp(16px, 2vw, 24px);
+  }
+
+  .city-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid #ebebeb;
+  }
+
+  .city-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    border-color: #ddd;
+  }
+
+  .city-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    background: #eaeaea;
+  }
+
+  .city-card-content {
+    padding: 16px;
+  }
+
+  .city-name {
+    font-size: clamp(18px, 2.5vw, 24px);
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #222;
+  }
+
+  .property-count {
+    font-size: 14px;
+    color: #717171;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .city-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .city-tag {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #f7f7f7;
+    color: #333;
+    border: 1px solid #eee;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #717171;
+  }
+
+  .empty-state svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    color: #ddd;
+  }
+  </style>
+
+  <div class="content-wrapper">
+    <h2>Explore Real Estate</h2>
+    <p class="subtitle">Find resorts, lodges, and shops for rent in cities across the country</p>
+
+    <div class="filters-bar">
+      <a class="filter-btn {% if filter_type == 'all' %}active{% endif %}" href="?type=all">All</a>
+      <a class="filter-btn {% if filter_type == 'resort' %}active{% endif %}" href="?type=resort">🏖️ Resorts</a>
+      <a class="filter-btn {% if filter_type == 'real_estate' %}active{% endif %}" href="?type=real_estate">🏕️ Lodges</a>
+      <a class="filter-btn {% if filter_type == 'shop' %}active{% endif %}" href="?type=shop">🏪 Shops</a>
+    </div>
+
+    {% if cities %}
+    <div class="cities-grid">
+      {% for city_info in cities %}
+      <a href="{% url 'realestate-properties' %}?city={{ city_info.city.id }}{% if filter_type and filter_type != 'all' %}&subtype={{ filter_type }}{% endif %}" class="city-card">
+        {% if city_info.sample_image %}
+        <img class="city-image" src="{{ city_info.sample_image }}" alt="{{ city_info.city.name }}">
+        {% else %}
+        <img class="city-image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e0e0e0' width='400' height='300'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3E{{ city_info.city.name }}%3C/text%3E%3C/svg%3E" alt="{{ city_info.city.name }}">
+        {% endif %}
+
+        <div class="city-card-content">
+          <div class="city-name">{{ city_info.city.name }}</div>
+          <div class="property-count">{{ city_info.count }} listing{{ city_info.count|pluralize }}</div>
+
+          {% if filter_type == 'all' %}
+          <div class="city-tags">
+            {% if city_info.resorts_count %}<span class="city-tag">🏖️ {{ city_info.resorts_count }} Resort{{ city_info.resorts_count|pluralize }}</span>{% endif %}
+            {% if city_info.lodges_count %}<span class="city-tag">🏕️ {{ city_info.lodges_count }} Lodge{{ city_info.lodges_count|pluralize }}</span>{% endif %}
+            {% if city_info.shops_count %}<span class="city-tag">🏪 {{ city_info.shops_count }} Shop{{ city_info.shops_count|pluralize }}</span>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+      <p style="font-size: clamp(14px, 2vw, 16px);">No real estate properties available yet</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endblock %
+    <div id="cities-container">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 16px; color: #717171;">Loading cities...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadCities();
+
+    // Category filter listeners
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const category = this.dataset.category;
+            loadCities(category);
+        });
+    });
+});
+
+function loadCities(category = 'all') {
+    const container = document.getElementById('cities-container');
+    container.innerHTML = `
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p style="margin-top: 16px; color: #717171;">Loading cities...</p>
+        </div>
+    `;
+
+    let url = '/api/properties/?property_type=longterm';
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const properties = data.results || data;
+            
+            // Filter by category if not 'all'
+            let filteredProps = properties;
+            if (category !== 'all') {
+                filteredProps = properties.filter(p => 
+                    p.property_subtype && p.property_subtype.toLowerCase() === category.toLowerCase()
+                );
+            }
+
+            // Group by city
+            const citiesData = {};
+            filteredProps.forEach(prop => {
+                const city = prop.city || 'Unknown';
+                if (!citiesData[city]) {
+                    citiesData[city] = {
+                        name: city,
+                        properties: [],
+                        resorts: 0,
+                        lodges: 0,
+                        shops: 0
+                    };
+                }
+                citiesData[city].properties.push(prop);
+                
+                // Count by type
+                const subtype = prop.property_subtype?.toLowerCase();
+                if (subtype === 'resort') citiesData[city].resorts++;
+                else if (subtype === 'lodge') citiesData[city].lodges++;
+                else if (subtype === 'shop') citiesData[city].shops++;
+            });
+
+            displayCities(citiesData, category);
+        })
+        .catch(error => {
+            console.error('Error loading cities:', error);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <h3 class="empty-state-title">Failed to load cities</h3>
+                    <p class="empty-state-text">Please try again later</p>
+                </div>
+            `;
+        });
+}
+
+function displayCities(citiesData, category) {
+    const container = document.getElementById('cities-container');
+    const cities = Object.values(citiesData);
+
+    if (cities.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🏘️</div>
+                <h3 class="empty-state-title">No cities found</h3>
+                <p class="empty-state-text">Check back later for new listings</p>
+            </div>
+        `;
+        return;
+    }
+
+    const html = `
+        <div class="cities-grid">
+            ${cities.map(city => {
+                const totalProps = city.properties.length;
+                const thumbnail = city.properties[0]?.thumbnail || '';
+                
+                let statsHtml = '';
+                if (category === 'all') {
+                    if (city.resorts > 0) statsHtml += `<span class="city-stat"><span class="city-stat-icon">🏖️</span>${city.resorts} Resort${city.resorts > 1 ? 's' : ''}</span>`;
+                    if (city.lodges > 0) statsHtml += `<span class="city-stat"><span class="city-stat-icon">🏠</span>${city.lodges} Lodge${city.lodges > 1 ? 's' : ''}</span>`;
+                    if (city.shops > 0) statsHtml += `<span class="city-stat"><span class="city-stat-icon">🏪</span>${city.shops} Shop${city.shops > 1 ? 's' : ''}</span>`;
+                } else {
+                    statsHtml = `<span class="city-stat"><span class="city-stat-value">${totalProps}</span> propert${totalProps > 1 ? 'ies' : 'y'} available</span>`;
+                }
+
+                return `
+                    <a href="/realestate/city/${encodeURIComponent(city.name)}/" class="city-card">
+                        <img src="${thumbnail}" alt="${city.name}" class="city-card-image" onerror="this.style.display='block'">
+                        <div class="city-card-content">
+                            <h3 class="city-name">
+                                <span class="city-icon">📍</span>
+                                ${city.name}
+                            </h3>
+                            <div class="city-stats">
+                                ${statsHtml}
+                            </div>
+                            <span class="city-badge">${totalProps} total listing${totalProps > 1 ? 's' : ''}</span>
+                        </div>
+                    </a>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    container.innerHTML = html;
+}
+</script>
+
+{% endblock %}
+{% endcomment %}

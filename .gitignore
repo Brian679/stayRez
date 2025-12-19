@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Django
+*.log
+local_settings.py
+
+# SQLite DBs (do not commit local DB)
+db.sqlite3
+backend/db.sqlite3
+
+# Collected static & user uploads
+staticfiles/
+backend/staticfiles/
+media/
+backend/media/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Kivy / build artifacts (mobile)
+*.spec
+bin/
+build/
+dist/
+
+# Crash dumps
+hs_err_pid*.log

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+h2 {
+  font-size: clamp(24px, 4vw + 1vh, 42px);
+  font-weight: 700;
+  margin-bottom: clamp(12px, 2vh, 20px);
+  color: #1a1a1a;
+}
+
+.breadcrumb {
+  font-size: 14px;
+  color: #717171;
+  margin-bottom: 20px;
+}
+
+.breadcrumb a {
+  color: #222;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 30px;
+}
+
+@media (max-width: 576px) {
+  .properties-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.property-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.property-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.property-image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  background: #e0e0e0;
+}
+
+.property-info {
+  padding: 16px;
+}
+
+.property-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-location {
+  font-size: 14px;
+  color: #717171;
+  margin-bottom: 12px;
+}
+
+.property-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+}
+
+.property-price span {
+  font-weight: 400;
+  font-size: 14px;
+  color: #717171;
+}
+
+.property-badge {
+  display: inline-block;
+  background: #111;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #717171;
+}
+
+.empty-state svg {
+  width: 100px;
+  height: 100px;
+  margin-bottom: 24px;
+  color: #ddd;
+}
+</style>
+
+<div class="content-wrapper">
+  <div class="breadcrumb">
+    <a href="{% url 'shop-cities' %}">← Back to cities</a>
+  </div>
+
+  <h2>🏪 {% if city %}Shops in {{ city.name }}{% else %}All Shops{% endif %}</h2>
+
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <a href="{% url 'web-property-detail' property.id %}" class="property-card">
+      {% if property.images.first %}
+      <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}" class="property-image">
+      {% else %}
+      <div class="property-image" style="display: flex; align-items: center; justify-content: center; background: #222;">
+        <span style="color: white; font-size: 18px; font-weight: 600;">{{ property.title|slice:":1" }}</span>
+      </div>
+      {% endif %}
+      <div class="property-info">
+        <h3 class="property-title">{{ property.title }}</h3>
+        <p class="property-location">{{ property.city.name }}{% if property.location %}, {{ property.location }}{% endif %}</p>
+        {% if property.nightly_price %}
+        <p class="property-price">${{ property.nightly_price|floatformat:0 }} <span>/night</span></p>
+        {% elif property.price_per_month %}
+        <p class="property-price">${{ property.price_per_month|floatformat:0 }} <span>/month</span></p>
+        {% endif %}
+        <span class="property-badge">🏪 Shop</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+    <p style="font-size: 16px;">No shop listings found{% if city %} in {{ city.name }}{% endif %}</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

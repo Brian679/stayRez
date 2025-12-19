@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Short-Term Stays - Find Your Perfect Getaway{% endblock %}
+
+{% block content %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        color: #222;
+        background-color: #fff;
+        line-height: 1.5;
+    }
+
+    .container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: clamp(16px, 3vw, 40px) clamp(16px, 4vw, 80px);
+    }
+
+    .header-section {
+        margin-bottom: clamp(24px, 4vw, 48px);
+        text-align: center;
+    }
+
+    .header-section h1 {
+        font-size: clamp(28px, 5vw, 48px);
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 12px;
+        letter-spacing: -0.02em;
+    }
+
+    .header-section p {
+        font-size: clamp(16px, 2vw, 20px);
+        color: #717171;
+        font-weight: 400;
+    }
+
+    .cities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: clamp(16px, 2vw, 24px);
+        margin-bottom: 48px;
+    }
+
+    .city-card {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+        background: #fff;
+    }
+
+    .city-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12), 0 12px 24px rgba(0,0,0,0.08);
+    }
+
+    .city-image-wrapper {
+        position: relative;
+        width: 100%;
+        height: 240px;
+        overflow: hidden;
+    }
+
+    .city-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .city-card:hover .city-image {
+        transform: scale(1.05);
+    }
+
+    .city-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 20px;
+        color: #fff;
+    }
+
+    .city-name {
+        font-size: clamp(22px, 3vw, 28px);
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .city-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .property-count {
+        font-size: 14px;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.95);
+        color: #222;
+        padding: 4px 12px;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .price-range {
+        font-size: 14px;
+        font-weight: 600;
+        background: rgba(255, 56, 92, 0.95);
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: clamp(40px, 8vw, 80px) 20px;
+        color: #717171;
+    }
+
+    .empty-icon {
+        width: clamp(80px, 15vw, 120px);
+        height: clamp(80px, 15vw, 120px);
+        margin: 0 auto 24px;
+        opacity: 0.6;
+    }
+
+    .empty-state h2 {
+        font-size: clamp(20px, 3vw, 28px);
+        color: #222;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        font-size: clamp(14px, 2vw, 16px);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 576px) {
+        .cities-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .city-image-wrapper {
+            height: 200px;
+        }
+    }
+
+    @media (min-width: 600px) and (max-width: 900px) {
+        .cities-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 900px) {
+        .cities-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+    }
+</style>
+
+<div class="container">
+    <div class="header-section">
+        <h1>✨ Short-Term Stays</h1>
+        <p>Book your perfect getaway - from weekends to monthly escapes</p>
+    </div>
+
+    {% if cities %}
+    <div class="cities-grid">
+        {% for city in cities %}
+        <a href="{% url 'shortterm-properties' %}?city={{ city.name }}" style="text-decoration: none; color: inherit;">
+            <div class="city-card">
+                <div class="city-image-wrapper">
+                    {% if city.image %}
+                    <img src="{{ city.image.url }}" alt="{{ city.name }}" class="city-image">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&auto=format&fit=crop" 
+                         alt="{{ city.name }}" class="city-image">
+                    {% endif %}
+                    <div class="city-overlay">
+                        <div class="city-name">{{ city.name }}</div>
+                        <div class="city-info">
+                            <span class="property-count">🏠 {{ city.property_count }} stay{{ city.property_count|pluralize }}</span>
+                            {% if city.min_price and city.max_price %}
+                            <span class="price-range">${{ city.min_price|floatformat:0 }} - ${{ city.max_price|floatformat:0 }}/night</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" 
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2>No Short-Term Stays Yet</h2>
+        <p>We're working on adding amazing short-term accommodations to our platform. Check back soon!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

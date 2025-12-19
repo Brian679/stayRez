@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Pending Payment Confirmations</h1>
+<div id="ajax-messages"></div>
+<table class="table" id="confirmations-table">
+    <thead>
+        <tr><th>ID</th><th>User</th><th>University</th><th>Amount</th><th>Submitted</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        {% for conf in page_obj.object_list %}
+        <tr id="conf-{{ conf.id }}">
+            <td>{{ conf.id }}</td>
+            <td><a href="/admin/accounts/user/{{ conf.payment.user.id }}/change/">{{ conf.payment.user.email }}</a></td>
+            <td><a href="/admin/properties/university/{{ conf.payment.university.id }}/change/">{{ conf.payment.university.name }}</a></td>
+            <td>{{ conf.payment.amount }}</td>
+            <td>{{ conf.submitted_at }}</td>
+            <td>
+                <button class="btn btn-success ajax-action" data-pk="{{ conf.id }}" data-action="approve">Approve</button>
+                <button class="btn btn-danger ajax-action" data-pk="{{ conf.id }}" data-action="decline">Decline</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav aria-label="Page navigation">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Previous</span></li>
+    {% endif %}
+
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Next</span></li>
+    {% endif %}
+  </ul>
+</nav>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+async function postAction(pk, action) {
+    const form = new FormData();
+    form.append('pk', pk);
+    form.append('action', action);
+
+    const resp = await fetch('', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: form
+    });
+    return resp.json();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.ajax-action').forEach(function(btn) {
+        btn.addEventListener('click', async function(e) {
+            const pk = this.dataset.pk;
+            const action = this.dataset.action;
+            this.disabled = true;
+            try {
+                const result = await postAction(pk, action);
+                if (result.status === 'approved' || result.status === 'declined') {
+                    const row = document.getElementById('conf-' + pk);
+                    if (row) row.remove();
+                    const msg = document.createElement('div');
+                    msg.className = 'alert alert-success';
+                    msg.innerText = 'Confirmation ' + pk + ' ' + result.status + '.';
+                    document.getElementById('ajax-messages').appendChild(msg);
+                } else if (result.error) {
+                    alert('Error: ' + result.error);
+                }
+            } catch (err) {
+                alert('Request failed');
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

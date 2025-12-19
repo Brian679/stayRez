@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+  line-height: 1.5;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 576px) {
+  .content-wrapper {
+    padding-left: 2.5vw;
+    padding-right: 2.5vw;
+  }
+}
+
+h2 {
+  font-size: clamp(24px, 4vw + 1vh, 42px);
+  font-weight: 700;
+  margin-bottom: clamp(12px, 2vh, 20px);
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: clamp(14px, 2vw + 0.5vh, 18px);
+  color: #666;
+  margin-bottom: clamp(30px, 4vh, 50px);
+}
+
+.cities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+  margin-top: clamp(20px, 3vh, 40px);
+}
+
+@media (max-width: 576px) {
+  .cities-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.city-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  height: 280px;
+}
+
+.city-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.city-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.city-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  color: white;
+}
+
+.city-name {
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.city-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.9);
+  color: #222;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #717171;
+}
+
+.empty-state svg {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  color: #ddd;
+}
+</style>
+
+<div class="content-wrapper">
+  <h2>🏪 Shops</h2>
+  <p class="subtitle">Browse approved shop listings by city</p>
+
+  {% if cities %}
+  <div class="cities-grid">
+    {% for city_info in cities %}
+    <a href="{% url 'shop-properties' %}?city={{ city_info.city.id }}" class="city-card">
+      {% if city_info.sample_image %}
+      <img src="{{ city_info.sample_image }}" alt="{{ city_info.city.name }}" class="city-card-image">
+      {% else %}
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e0e0e0' width='400' height='300'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3E{{ city_info.city.name }}%3C/text%3E%3C/svg%3E" alt="{{ city_info.city.name }}" class="city-card-image">
+      {% endif %}
+      <div class="city-card-overlay">
+        <h3 class="city-name">{{ city_info.city.name }}</h3>
+        <span class="city-badge">{{ city_info.count }} shop{{ city_info.count|pluralize }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+    <p style="font-size: clamp(14px, 2vw, 16px);">No shop listings available yet</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

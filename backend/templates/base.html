@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>offRez</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    {% block extra_head %}{% endblock %}
+    <style>
+        :root { --offrez-black: #000; --offrez-yellow: #ffd700; }
+        body { background: #fff; color: #111; }
+        .navbar-brand.brand { 
+            font-weight:700; 
+            font-size: 1.5rem; 
+            margin-left: 5px !important;
+            padding-left: 0 !important;
+        }
+        .brand .off { color: #000; }
+        .brand .rez { color: #ffd700; }
+        a.btn-yellow { background: var(--offrez-yellow); color: #000; }
+        .fixed-filter { position: fixed; left:0; bottom:0; width:100%; height:60px; background: #111; color:#fff; }
+        
+        /* Navbar styling */
+        .navbar {
+            background: #fff !important;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 1050;
+        }
+        
+        /* Add padding to body to account for fixed navbar */
+        body {
+            padding-top: 70px;
+        }
+        
+        /* Global yellow button styles */
+        .btn-primary, .btn-success, .btn-warning {
+            background: #ffd700 !important;
+            color: #000 !important;
+            border-color: #ffd700 !important;
+        }
+        .btn-primary:hover, .btn-success:hover, .btn-warning:hover {
+            background: #ffed4e !important;
+            color: #000 !important;
+            border-color: #ffed4e !important;
+        }
+
+        /* University selector and notifications */
+        .nav-icon {
+            position: relative;
+            font-size: 1.3rem;
+            color: #111;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+        .nav-icon:hover {
+            color: #ffd700;
+        }
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #ffd700;
+            color: #000;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .dropdown-menu {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .notification-item:hover {
+            background: #f8f9fa;
+        }
+        .notification-item.unread {
+            background: #fffbea;
+        }
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .notification-message {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .notification-time {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 5px;
+        }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg">
+      <div class="container">
+        <a class="navbar-brand brand" href="/"> <str class="off">off</str><str class="rez">Rez</str></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="nav">
+          <ul class="navbar-nav ms-auto align-items-center">
+            <!-- Notifications -->
+            {% if request.user.is_authenticated %}
+            <li class="nav-item dropdown">
+              <a class="nav-link nav-icon" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" id="notificationIcon">
+                <i class="bi bi-bell"></i>
+                <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;" id="notificationDropdown">
+                <li><h6 class="dropdown-header">Notifications</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><div id="notificationList" class="px-2"></div></li>
+              </ul>
+            </li>
+            {% endif %}
+
+            {% if request.user.is_authenticated %}
+              <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-profile' %}">Profile</a></li>
+              <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-logout' %}">Logout</a></li>
+            {% else %}
+              <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-login' %}">Login</a></li>
+              <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-register' %}">Register</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mt-4">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% if request.user.is_authenticated %}
+    <script>
+      // Cache last fetched notifications so we can mark-as-read on open.
+      let lastNotifications = [];
+
+      // Fetch notifications
+      async function fetchNotifications() {
+        try {
+          const response = await fetch('/api/notifications/');
+          const data = await response.json();
+
+          lastNotifications = Array.isArray(data) ? data : [];
+          
+          const unreadCount = data.filter(n => !n.is_read).length;
+          const badge = document.getElementById('notificationCount');
+          const list = document.getElementById('notificationList');
+          
+          if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+          } else {
+            badge.style.display = 'none';
+          }
+          
+          if (data.length === 0) {
+            // Show context-aware empty message based on user role
+            const emptyMessage = {% if request.user.role == 'landlord' %}
+              'No property-related notifications yet. You\'ll be notified about inquiries and payments.';
+            {% elif request.user.role == 'admin' %}
+              'No admin notifications. You\'ll see payment confirmations and system alerts here.';
+            {% else %}
+              'No notifications yet. You\'ll be notified about payment confirmations and property updates.';
+            {% endif %}
+            list.innerHTML = `<p class="text-muted text-center py-3">${emptyMessage}</p>`;
+          } else {
+            list.innerHTML = data.map(n => `
+              <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markAsRead(${n.id}, '${n.link || ''}')">
+                <div class="notification-title">${n.title}</div>
+                <div class="notification-message">${n.message}</div>
+                <div class="notification-time">${new Date(n.created_at).toLocaleString()}</div>
+              </div>
+            `).join('');
+          }
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      }
+      
+      async function markAsRead(notificationId, link) {
+        try {
+          await fetch(`/api/notifications/${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCookie('csrftoken')
+            }
+          });
+          fetchNotifications();
+          if (link) {
+            window.location.href = link;
+          }
+        } catch (error) {
+          console.error('Error marking notification as read:', error);
+        }
+      }
+
+      async function markAllVisibleAsRead() {
+        try {
+          const unread = (lastNotifications || []).filter(n => !n.is_read);
+          if (!unread.length) return;
+
+          // Optimistically update UI for a snappier feel.
+          const items = document.querySelectorAll('#notificationList .notification-item.unread');
+          items.forEach(el => el.classList.remove('unread'));
+          const badge = document.getElementById('notificationCount');
+          if (badge) badge.style.display = 'none';
+
+          await Promise.all(
+            unread.map(n =>
+              fetch(`/api/notifications/${n.id}/mark-read/`, {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': getCookie('csrftoken')
+                }
+              })
+            )
+          );
+
+          fetchNotifications();
+        } catch (error) {
+          console.error('Error marking all notifications as read:', error);
+          // Refresh to recover UI state.
+          fetchNotifications();
+        }
+      }
+      
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+      
+      // Fetch notifications on page load and every 30 seconds
+      fetchNotifications();
+      setInterval(fetchNotifications, 30000);
+
+      // When the user opens the dropdown, treat that as "reading" and mark unread as read.
+      document.addEventListener('DOMContentLoaded', function() {
+        const icon = document.getElementById('notificationIcon');
+        if (!icon) return;
+        icon.addEventListener('shown.bs.dropdown', function() {
+          markAllVisibleAsRead();
+        });
+      });
+    </script>
+    {% endif %}
+  </body>
+</html>

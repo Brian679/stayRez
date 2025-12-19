@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Leaflet CSS and JS for maps -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+.contact-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 60px);
+}
+
+.contact-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.contact-header {
+  background: #ffd700;
+  color: #000;
+  padding: clamp(24px, 4vw, 40px);
+  text-align: center;
+}
+
+.contact-title {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.property-name {
+  font-size: clamp(14px, 2vw, 16px);
+  opacity: 0.9;
+}
+
+.contact-body {
+  padding: clamp(24px, 4vw, 40px);
+}
+
+.info-box {
+  background: #f8f9fa;
+  border-left: 4px solid #0d6efd;
+  padding: clamp(16px, 3vw, 24px);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.contact-detail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(12px, 2vw, 16px);
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.contact-detail:hover {
+  border-color: #0d6efd;
+  transform: translateX(4px);
+}
+
+.contact-icon {
+  font-size: clamp(24px, 3vw, 32px);
+  flex-shrink: 0;
+}
+
+.contact-info {
+  flex: 1;
+}
+
+.contact-label {
+  font-size: clamp(11px, 1.3vw, 13px);
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.contact-value {
+  font-size: clamp(15px, 2vw, 18px);
+  font-weight: 600;
+  color: #222;
+}
+
+.payment-section {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);
+  border-radius: 12px;
+  padding: clamp(24px, 4vw, 32px);
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.payment-icon {
+  font-size: clamp(48px, 8vw, 64px);
+  margin-bottom: 16px;
+}
+
+.payment-title {
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 12px;
+}
+
+.payment-text {
+  font-size: clamp(14px, 1.8vw, 16px);
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  font-size: clamp(13px, 1.5vw, 15px);
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.form-control {
+  width: 100%;
+  padding: clamp(12px, 2vw, 16px);
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: clamp(14px, 1.6vw, 16px);
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.btn {
+  padding: clamp(12px, 2vw, 16px) clamp(24px, 4vw, 32px);
+  border: none;
+  border-radius: 10px;
+  font-size: clamp(14px, 1.8vw, 16px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: #ffd700;
+  color: #000;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  background: #ffed4e;
+  color: #000;
+}
+
+.btn-success {
+  background: #ffd700;
+  color: #000;
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  background: #ffed4e;
+  color: #000;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: #fff;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  color: #fff;
+  text-decoration: none;
+}
+
+.alert {
+  padding: clamp(16px, 3vw, 20px);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: clamp(13px, 1.6vw, 15px);
+}
+
+.alert-info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.alert-warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 600;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.back-link:hover {
+  gap: 12px;
+  color: #0b5ed7;
+}
+</style>
+
+<div class="contact-container">
+  <a href="{% url 'web-property-detail' prop.id %}" class="back-link">
+    <span>←</span>
+    <span>Back to Property</span>
+  </a>
+
+  <div class="contact-card">
+    <div class="contact-header">
+      <div class="contact-title">Contact Landlord</div>
+      <div class="property-name">{{ prop.title }}</div>
+    </div>
+
+    <div class="contact-body">
+      {% if has_paid %}
+        <!-- Show contact details if admin fee is paid and approved -->
+        <div class="info-box" style="background: #d4edda; border-left-color: #28a745;">
+          <p style="margin: 0; font-size: clamp(13px, 1.5vw, 15px); color: #155724; font-weight: 600;">
+            ✓ Admin fee payment approved
+          </p>
+          {% if uses_remaining > 0 %}
+          <p style="margin: 8px 0 0 0; font-size: clamp(12px, 1.4vw, 14px); color: #155724;">
+            You have <strong>{{ uses_remaining }}</strong> accommodation{{ uses_remaining|pluralize }} left to view.
+          </p>
+          {% elif uses_remaining == 0 %}
+          <p style="margin: 8px 0 0 0; font-size: clamp(12px, 1.4vw, 14px); color: #856404;">
+            ⚠️ You have used all your accommodation viewing options.
+          </p>
+          {% endif %}
+        </div>
+        
+        {% if already_viewed %}
+        <div class="alert alert-info" style="margin-bottom: 20px;">
+          <strong>Note:</strong> You have already viewed this property's contact details. No additional charge.
+        </div>
+        {% endif %}
+
+        <div class="contact-detail">
+          <div class="contact-icon">📱</div>
+          <div class="contact-info">
+            <div class="contact-label">Phone Number</div>
+            <div class="contact-value">{{ prop.contact_phone|default:"Not provided" }}</div>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-icon">🏠</div>
+          <div class="contact-info">
+            <div class="contact-label">House Number</div>
+            <div class="contact-value">{{ prop.house_number|default:"Not provided" }}</div>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-icon">👤</div>
+          <div class="contact-info">
+            <div class="contact-label">Caretaker</div>
+            <div class="contact-value">{{ prop.caretaker_number|default:"Not provided" }}</div>
+          </div>
+        </div>
+
+        {% if prop.location %}
+        <div class="contact-detail">
+          <div class="contact-icon">📍</div>
+          <div class="contact-info">
+            <div class="contact-label">Full Address</div>
+            <div class="contact-value">{{ prop.location }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if prop.latitude and prop.longitude %}
+        <div class="contact-detail">
+          <div class="contact-icon">🗺️</div>
+          <div class="contact-info">
+            <div class="contact-label">Coordinates</div>
+            <div class="contact-value">{{ prop.latitude }}, {{ prop.longitude }}</div>
+          </div>
+        </div>
+        
+        <!-- Map Display -->
+        <div style="margin-top: 24px; border-radius: 12px; overflow: hidden; height: 400px;">
+          <div id="contact-map" style="width: 100%; height: 100%;"></div>
+        </div>
+        
+        <script>
+        // Initialize map for contact details
+        var contactMap = L.map('contact-map').setView([{{ prop.latitude }}, {{ prop.longitude }}], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(contactMap);
+        L.marker([{{ prop.latitude }}, {{ prop.longitude }}]).addTo(contactMap)
+          .bindPopup('<b>{{ prop.title }}</b><br>{{ prop.location|default:"Property Location" }}').openPopup();
+        </script>
+        {% endif %}
+
+      {% elif payment_status %}
+        <!-- Show payment confirmation status -->
+        {% if payment_status == 'pending' %}
+        <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
+          <p style="margin: 0; font-size: clamp(14px, 1.8vw, 16px); color: #856404; font-weight: 600;">
+            ⏳ Payment Confirmation Status: Pending
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: clamp(12px, 1.5vw, 14px); color: #856404;">
+            Your payment confirmation has been submitted and is awaiting admin approval. You will be able to view landlord contact details once approved.
+          </p>
+        </div>
+        
+        <div class="alert alert-info" style="margin-top: 20px;">
+          <strong>What happens next?</strong>
+          <ol style="margin: 12px 0 0 20px; line-height: 1.8;">
+            <li>Admin reviews your payment confirmation</li>
+            <li>Once approved, you'll get {{ payment_confirmation.payment.allowed_accommodations }} accommodation contacts</li>
+            <li>You can then view landlord details for up to {{ payment_confirmation.payment.allowed_accommodations }} properties</li>
+          </ol>
+        </div>
+        
+        <button type="button" id="notify-admin-btn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+          Notify Admin to Check Payment
+        </button>
+        
+        <script>
+        document.getElementById('notify-admin-btn').addEventListener('click', async function() {
+          const btn = this;
+          btn.disabled = true;
+          btn.textContent = 'Sending notification...';
+          
+          try {
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch('/api/payments/notify-admin/{{ payment_confirmation.payment.id }}/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+              }
+            });
+            
+            if (response.ok) {
+              alert('Admin has been notified about your payment. Please wait for approval.');
+              btn.textContent = 'Notification Sent ✓';
+            } else {
+              alert('Failed to notify admin. Please try again.');
+              btn.disabled = false;
+              btn.textContent = 'Notify Admin to Check Payment';
+            }
+          } catch (error) {
+            alert('Error: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = 'Notify Admin to Check Payment';
+          }
+        });
+        </script>
+
+        {% elif payment_status == 'declined' %}
+        <div class="info-box" style="background: #f8d7da; border-left-color: #dc3545;">
+          <p style="margin: 0; font-size: clamp(14px, 1.8vw, 16px); color: #721c24; font-weight: 600;">
+            ❌ Payment Confirmation Status: Declined
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: clamp(12px, 1.5vw, 14px); color: #721c24;">
+            Your payment confirmation was declined by admin. Please verify your payment and submit a new confirmation below.
+          </p>
+        </div>
+
+        <!-- Show payment form again for declined status -->
+        {% if request.user.is_authenticated %}
+          <div class="alert alert-info" style="margin-top: 20px;">
+            <strong>Payment Process:</strong>
+            <ol style="margin: 12px 0 0 20px; line-height: 1.8;">
+              <li>Enter the number of students</li>
+              <li>Calculate the total admin fee</li>
+              <li>Send payment to the provided Ecocash number</li>
+              <li>Submit payment confirmation</li>
+              <li>Wait for admin approval</li>
+            </ol>
+          </div>
+
+          <form id="payment-form">
+            <div class="form-group">
+              <label class="form-label">Number of Students</label>
+              <input type="number" id="students" class="form-control" min="1" placeholder="Enter number of students" required>
+            </div>
+
+            <button type="button" id="calculate-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 20px;">
+              Calculate Admin Fee
+            </button>
+          </form>
+
+          <div id="payment-instructions" style="display: none;">
+            <div class="alert alert-warning">
+              <strong>Payment Details:</strong>
+              <div id="payment-amount" style="font-size: clamp(18px, 2.5vw, 24px); font-weight: 700; margin: 12px 0;"></div>
+              <p style="margin: 8px 0 0 0;">
+                <strong>Ecocash Number:</strong> 078196541<br>
+                <strong>Account Holder:</strong> Brian Chinyanga
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Confirmation Message</label>
+              <textarea id="confirmation-text" class="form-control" rows="4" placeholder="Paste your Ecocash payment confirmation message here..." required></textarea>
+            </div>
+
+            <button type="button" id="submit-confirmation-btn" class="btn btn-success" style="width: 100%;">
+              Submit Payment Confirmation
+            </button>
+          </div>
+        {% endif %}
+        {% endif %}
+
+      {% else %}
+        <!-- Admin fee payment required - no payment submitted yet -->
+        <div class="payment-section">
+          <div class="payment-icon">🔒</div>
+          <h2 class="payment-title">Admin Fee Payment Required</h2>
+          <p class="payment-text">
+            To view landlord contact details and exact property location, please complete the admin fee payment for {{ prop.university.name }}.
+          </p>
+        </div>
+
+        {% if request.user.is_authenticated %}
+          <div class="alert alert-info">
+            <strong>Payment Process:</strong>
+            <ol style="margin: 12px 0 0 20px; line-height: 1.8;">
+              <li>Enter the number of students</li>
+              <li>Calculate the total admin fee</li>
+              <li>Send payment to the provided Ecocash number</li>
+              <li>Submit payment confirmation</li>
+              <li>Wait for admin approval</li>
+            </ol>
+          </div>
+
+          <form id="payment-form">
+            <div class="form-group">
+              <label class="form-label">Number of Students</label>
+              <input type="number" id="students" class="form-control" min="1" placeholder="Enter number of students" required>
+            </div>
+
+            <button type="button" id="calculate-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 20px;">
+              Calculate Admin Fee
+            </button>
+          </form>
+
+          <div id="payment-instructions" style="display: none;">
+            <div class="alert alert-warning">
+              <strong>Payment Details:</strong>
+              <div id="payment-amount" style="font-size: clamp(18px, 2.5vw, 24px); font-weight: 700; margin: 12px 0;"></div>
+              <p style="margin: 8px 0 0 0;">
+                <strong>Ecocash Number:</strong> 078196541<br>
+                <strong>Account Holder:</strong> Brian Chinyanga
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Confirmation Message</label>
+              <textarea id="confirmation-text" class="form-control" rows="4" placeholder="Paste your Ecocash payment confirmation message here..." required></textarea>
+            </div>
+
+            <button type="button" id="submit-confirmation-btn" class="btn btn-success" style="width: 100%;">
+              Submit Payment Confirmation
+            </button>
+          </div>
+
+        {% else %}
+          <div class="alert alert-warning" style="text-align: center;">
+            <p style="margin: 0; font-size: clamp(14px, 1.8vw, 16px);">
+              Please <a href="{% url 'web-login' %}?next={{ request.path }}" style="color: #0d6efd; font-weight: 600;">login</a> to proceed with payment
+            </p>
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <div style="margin-top: 32px; text-align: center;">
+        <a href="{% url 'web-property-detail' prop.id %}" class="btn btn-secondary">
+          Back to Property Details
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Get CSRF token from cookie
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const calculateBtn = document.getElementById('calculate-btn');
+  const submitBtn = document.getElementById('submit-confirmation-btn');
+  const csrftoken = getCookie('csrftoken');
+  
+  if (calculateBtn) {
+    calculateBtn.addEventListener('click', async function() {
+      const studentsInput = document.getElementById('students');
+      const students = studentsInput.value.trim();
+      const propId = {{ prop.id }};
+      
+      // Validate input
+      if (!students || students === '') {
+        alert('This field is required. Please enter the number of students.');
+        studentsInput.focus();
+        return;
+      }
+      
+      const studentsNum = parseInt(students);
+      if (isNaN(studentsNum) || studentsNum < 1) {
+        alert('Please enter a valid number of students (minimum 1).');
+        studentsInput.focus();
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/properties/${propId}/contact/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({students: studentsNum})
+        });
+        
+        const data = await response.json();
+        
+        if (response.status === 402 && data.payment_instructions) {
+          document.getElementById('payment-amount').textContent = `Total: $${data.payment_instructions.amount}`;
+          document.getElementById('payment-instructions').style.display = 'block';
+        } else if (response.status === 400) {
+          // Capacity exceeded or validation error
+          alert(data.detail || 'Unable to calculate admin fee. Please try again.');
+        } else {
+          alert(data.detail || 'Unable to calculate admin fee. Please try again.');
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+  }
+  
+  if (submitBtn) {
+    submitBtn.addEventListener('click', async function() {
+      const confirmationText = document.getElementById('confirmation-text').value;
+      const students = document.getElementById('students').value;
+      
+      if (!confirmationText.trim()) {
+        alert('Please paste your payment confirmation message');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/payments/confirm/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+          },
+          body: JSON.stringify({
+            university: {{ prop.university.id }},
+            for_number_of_students: parseInt(students),
+            confirmation_text: confirmationText
+          })
+        });
+        
+        if (response.status === 201) {
+          alert('Payment confirmation submitted successfully! Admin will review your payment shortly.');
+          location.reload();
+        } else {
+          const data = await response.json();
+          alert('Error submitting confirmation: ' + JSON.stringify(data));
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+  }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="/static/admin/css/base.css">
+  <link rel="stylesheet" href="/static/admin/css/forms.css">
+  <link rel="stylesheet" href="/static/admin/css/responsive.css">
+  <style>
+    .offrez-admin-wrap { max-width: 780px; margin: 0 auto; }
+    .offrez-admin-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="offrez-admin-wrap">
+  <h2>Delete property</h2>
+  <div class="offrez-admin-card">
+    <p>Are you sure you want to delete <strong>{{ property.title }}</strong>?</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="submit-row">
+        <input type="submit" value="Yes, delete" class="deletelink">
+        <a class="button" href="{% url 'dashboard-my-properties' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

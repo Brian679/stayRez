@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>My Properties</h3>
+<table class="table">
+    <thead><tr><th>Preview</th><th>Title</th><th>Type</th><th>Approved</th><th></th></tr></thead>
+    <tbody>
+        {% for p in properties %}
+        <tr>
+            <td>
+                {% if p.images.first %}
+                <img src="{{ p.images.first.image.url }}" width="120" class="img-thumbnail" />
+                {% else %}
+                <span class="text-muted">No image</span>
+                {% endif %}
+            </td>
+            <td>{{ p.title }}</td>
+            <td>{{ p.get_property_type_display }}</td>
+            <td>{{ p.is_approved }}</td>
+            <td class="text-end">
+                <a class="btn btn-sm btn-outline-dark" href="{% url 'dashboard-edit-property' p.id %}">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'dashboard-delete-property' p.id %}">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">You have no properties yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'dashboard-add-property' %}" class="btn btn-primary">Add Property</a>
+{% endblock %}

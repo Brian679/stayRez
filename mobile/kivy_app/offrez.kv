@@ -1,0 +1,1609 @@
+<HomeScreen>:
+    FloatLayout:
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Fixed Header at top (10% height, 100% width)
+        BoxLayout:
+            size_hint: 1, 0.1
+            pos_hint: {'top': 1, 'center_x': 0.5}
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                # Bottom shadow
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            # Brand
+            Label:
+                id: brand_logo
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                size_hint_x: 0.6
+                font_size: sp(24) if root.width < dp(600) else sp(28)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+            Button:
+                text: '☰'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20) if root.width < dp(600) else sp(24)
+                on_release: app.show_options_menu()
+            Widget:
+                size_hint_x: 0.1
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20) if root.width < dp(600) else sp(24)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        
+        # Scrollable Services Grid (below header)
+        ScrollView:
+            size_hint: 1, 0.9
+            pos_hint: {'top': 0.9, 'center_x': 0.5}
+            do_scroll_x: False
+            GridLayout:
+                id: services_grid
+                cols: 2 if root.width < dp(600) else 3
+                spacing: dp(10)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height
+
+<UniversitiesScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 0
+        spacing: 0
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        
+        # Fixed App Header (10% height)
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Select University[/b]'
+                markup: True
+                font_size: sp(20) if root.width < dp(600) else sp(22)
+                color: 0, 0, 0, 1
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        
+        # Header/Title section
+        BoxLayout:
+            size_hint_y: None
+            height: dp(70)
+            padding: [dp(16), dp(8)]
+            spacing: dp(10)
+            canvas.before:
+                Color:
+                    rgba: 0.98, 0.98, 0.98, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Label:
+                text: '[b]Students Accommodation[/b]\\n[size=13sp]Select a university to view properties[/size]'
+                markup: True
+                font_size: sp(18) if root.width > dp(600) else sp(16)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0.1, 0.1, 0.1, 1
+            Label:
+                id: loading_label
+                text: ''
+                size_hint_x: None
+                width: dp(100)
+                halign: 'right'
+                valign: 'middle'
+                color: 1, 0.84, 0, 1
+                font_size: sp(13)
+        
+        # Universities grid - responsive columns
+        ScrollView:
+            canvas.before:
+                Color:
+                    rgba: 0.96, 0.96, 0.96, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            GridLayout:
+                id: unis_container
+                cols: 1 if root.width < dp(600) else (2 if root.width < dp(900) else 3)
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(16)
+                padding: [dp(16), dp(16)]
+
+<PropertyListScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 0
+        spacing: 0
+        canvas.before:
+            Color:
+                rgba: 0.98, 0.98, 0.98, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        
+        # Fixed App Header (10% height)
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                size_hint_x: 0.6
+                font_size: sp(24) if root.width < dp(600) else sp(28)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        
+        # Fixed Search Bar (better styling, always visible)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(70)
+            orientation: 'vertical'
+            padding: [dp(16), dp(8)]
+            spacing: 0
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0.93, 0.93, 0.93, 1
+                Rectangle:
+                    pos: [self.x, self.y]
+                    size: [self.width, dp(1)]
+            BoxLayout:
+                size_hint_y: None
+                height: dp(48)
+                spacing: 10
+                TextInput:
+                    id: search_input
+                    hint_text: '🔍 Search amenities or price...'
+                    multiline: False
+                    font_size: sp(15)
+                    padding: [dp(18), dp(12)]
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    foreground_color: 0.15, 0.15, 0.15, 1
+                    hint_text_color: 0.6, 0.6, 0.6, 1
+                    cursor_color: 0.05, 0.43, 0.99, 1
+                    canvas.before:
+                        Color:
+                            rgba: 0.96, 0.96, 0.96, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(25),]
+                        Color:
+                            rgba: 0.88, 0.88, 0.88, 1
+                        Line:
+                            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(25)]
+                            width: 1.5
+                Button:
+                    text: 'Search'
+                    size_hint_x: None
+                    width: dp(90)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 1, 1, 1, 1
+                    font_size: sp(15)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 0.05, 0.43, 0.99, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(25),]
+            Label:
+                id: props_loading
+                text: ''
+                size_hint_y: None
+                height: 0
+                halign: 'center'
+                valign: 'middle'
+                color: 0.5, 0.5, 0.5, 1
+        
+        # Properties list with responsive columns (1 on mobile, up to 3 on large screens)
+        ScrollView:
+            GridLayout:
+                id: props_container
+                cols: 1 if self.width < dp(600) else (1 if self.width < dp(993) else (2 if self.width < dp(1400) else 3))
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(20) if self.width < dp(600) else dp(24)
+                padding: [dp(8) if self.width < dp(600) else dp(16), dp(10), dp(8) if self.width < dp(600) else dp(16), dp(120)]
+        
+        # Fixed Bottom Filter Panel (evenly distributed, better design)
+        BoxLayout:
+            size_hint_y: None
+            height: self.parent.height * 0.1 if self.parent else dp(70)
+            padding: [dp(12), dp(8)]
+            spacing: dp(10)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.08
+                Rectangle:
+                    pos: [self.x, self.top - dp(4)]
+                    size: [self.width, dp(4)]
+            
+            # Evenly distributed filter buttons
+            Button:
+                id: filter_all
+                text: 'All'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 1, 1, 1, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 1, 0.84, 0, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+            Button:
+                id: filter_two_sharing
+                text: '2 Share'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+            Button:
+                id: filter_single
+                text: 'Single'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+            Button:
+                id: filter_boys
+                text: 'Boys'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+            Button:
+                id: filter_girls
+                text: 'Girls'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+            Button:
+                id: filter_mixed
+                text: 'Mixed'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+            Button:
+                id: filter_overnight
+                text: '⭐ Night'
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.2, 0.2, 0.2, 1
+                font_size: sp(13)
+                bold: True
+                canvas.before:
+                    Color:
+                        rgba: 0.94, 0.94, 0.94, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(50),]
+                    Color:
+                        rgba: 0.88, 0.88, 0.88, 1
+                    Line:
+                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                        width: 1.5
+
+<PropertyDetailScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 0
+        spacing: 0
+        canvas.before:
+            Color:
+                rgba: 0.98, 0.98, 0.98, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Fixed header (web uses fixed header with brand only)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(58)
+            padding: [dp(16), 0]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 0.984, 0.969, 0.969, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.12
+                Rectangle:
+                    pos: self.x, self.y
+                    size: self.width, dp(1)
+            Button:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                color: 0.06, 0.055, 0.055, 1
+                font_size: sp(24)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                on_release: app.root.current = 'home'
+            Widget:
+            Label:
+                id: prop_loading
+                text: ''
+                size_hint_x: None
+                width: dp(90)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
+                color: 0.5, 0.5, 0.5, 1
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+
+        # Content (web uses a compact card-based layout)
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: [dp(12), dp(12), dp(12), dp(84)]
+
+        # Content (web uses a compact card-based layout)
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: [dp(12), dp(12), dp(12), dp(84)]
+
+                # Property image - full width like web
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: dp(250)
+                    canvas.before:
+                        Color:
+                            rgba: 0.94, 0.94, 0.94, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: self.size
+                    AsyncImage:
+                        id: prop_image
+                        source: ''
+                        allow_stretch: True
+                        keep_ratio: False
+
+                # Property header card
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+
+                    Label:
+                        id: prop_title
+                        text: ''
+                        font_size: sp(22)
+                        bold: True
+                        size_hint_y: None
+                        height: self.texture_size[1] + dp(6)
+                        halign: 'left'
+                        valign: 'top'
+                        text_size: self.width, None
+                        color: 0.13, 0.13, 0.13, 1
+
+                    BoxLayout:
+                        id: prop_meta_items
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(6)
+
+                    BoxLayout:
+                        id: price_badges
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(10)
+
+                # Map section (placeholder + open maps)
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+
+                    Label:
+                        text: '📍 Location Map'
+                        size_hint_y: None
+                        height: dp(44)
+                        padding: [dp(16), 0]
+                        font_size: sp(14)
+                        bold: True
+                        color: 0.13, 0.13, 0.13, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [dp(16), dp(12)]
+                        spacing: dp(10)
+                        canvas.before:
+                            Color:
+                                rgba: 0.91, 0.91, 0.91, 1
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(10),]
+                        Label:
+                            id: map_info
+                            text: ''
+                            size_hint_y: None
+                            height: self.texture_size[1] + dp(8)
+                            font_size: sp(13)
+                            color: 0.25, 0.25, 0.25, 1
+                            halign: 'left'
+                            valign: 'top'
+                            text_size: self.width, None
+                        Button:
+                            text: 'Open in Google Maps'
+                            size_hint_y: None
+                            height: dp(42)
+                            background_normal: ''
+                            background_color: 0.86, 0.86, 0.86, 1
+                            color: 0.15, 0.15, 0.15, 1
+                            on_release: root.open_maps()
+
+                # Gallery section
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+                    Label:
+                        text: '📷 Property Images'
+                        size_hint_y: None
+                        height: dp(44)
+                        padding: [dp(16), 0]
+                        font_size: sp(14)
+                        bold: True
+                        color: 0.13, 0.13, 0.13, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    ScrollView:
+                        do_scroll_y: False
+                        do_scroll_x: True
+                        bar_width: dp(4)
+                        size_hint_y: None
+                        height: dp(170)
+                        GridLayout:
+                            id: gallery_container
+                            rows: 1
+                            size_hint_x: None
+                            width: self.minimum_width
+                            spacing: dp(10)
+                            padding: [dp(16), dp(10)]
+
+                # Description section
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+                    Label:
+                        text: '📝 Description'
+                        size_hint_y: None
+                        height: dp(22)
+                        font_size: sp(16)
+                        bold: True
+                        color: 0.13, 0.13, 0.13, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    Label:
+                        id: prop_desc
+                        text: ''
+                        font_size: sp(14)
+                        size_hint_y: None
+                        height: self.texture_size[1] + dp(6)
+                        halign: 'left'
+                        valign: 'top'
+                        text_size: self.width, None
+                        color: 0.25, 0.25, 0.25, 1
+
+                # Amenities section
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+                    Label:
+                        text: '✨ Amenities & Features'
+                        size_hint_y: None
+                        height: dp(22)
+                        font_size: sp(16)
+                        bold: True
+                        color: 0.13, 0.13, 0.13, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    BoxLayout:
+                        id: amenities_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(8)
+
+                # Reviews section
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+                    Label:
+                        text: '⭐ Reviews & Ratings'
+                        size_hint_y: None
+                        height: dp(22)
+                        font_size: sp(16)
+                        bold: True
+                        color: 0.13, 0.13, 0.13, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                    BoxLayout:
+                        id: reviews_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(8)
+
+        # Fixed bottom contact bar (web uses fixed bottom bar)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(70)
+            padding: [dp(16), dp(10)]
+            spacing: dp(10)
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Widget:
+            Button:
+                text: '📱  Contact Landlord'
+                size_hint_x: None
+                width: min(root.width - dp(32), dp(320))
+                size_hint_y: None
+                height: dp(50)
+                background_normal: ''
+                background_color: 1, 0.84, 0, 1
+                color: 0, 0, 0, 1
+                font_size: sp(15)
+                bold: True
+                on_release: root.contact_landlord()
+
+<LoginScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 0.973, 0.976, 0.980, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Top navbar (web base.html)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(62)
+            padding: [dp(16), 0]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 1, 0.84, 0, 0.25
+                Rectangle:
+                    pos: self.x, self.y
+                    size: self.width, dp(2)
+            Label:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                font_size: sp(26)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: [dp(16), dp(24)]
+                spacing: dp(16)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(12)
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_x: None
+                    width: min(root.width - dp(32), dp(460))
+                    pos_hint: {'center_x': 0.5}
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: 0
+                    spacing: 0
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(10),]
+                        Color:
+                            rgba: 0, 0, 0, 0.10
+                        Line:
+                            width: 1.1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(10))
+
+                    # Form body
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [dp(16), dp(16)]
+                        spacing: dp(12)
+
+                        Label:
+                            text: '[b]Sign in[/b]'
+                            markup: True
+                            font_size: sp(20)
+                            color: 0.15, 0.15, 0.15, 1
+                            size_hint_y: None
+                            height: dp(28)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+
+                        Label:
+                            text: 'Use your email and password.'
+                            font_size: sp(13)
+                            color: 0.45, 0.45, 0.45, 1
+                            size_hint_y: None
+                            height: dp(18)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+
+                        # Email
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Email'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: email_input
+                                hint_text: 'Enter your email'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        # Password
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Password'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: password_input
+                                hint_text: 'Enter your password'
+                                password: True
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        Label:
+                            id: login_status
+                            text: ''
+                            size_hint_y: None
+                            height: dp(22)
+                            color: 0.75, 0.2, 0.2, 1
+                            font_size: sp(13)
+
+                        Button:
+                            text: 'Login'
+                            size_hint_y: None
+                            height: dp(46)
+                            background_normal: ''
+                            background_color: 1, 0.84, 0, 1
+                            color: 0, 0, 0, 1
+                            font_size: sp(15)
+                            bold: True
+                            on_release: root.do_login()
+
+                        BoxLayout:
+                            size_hint_y: None
+                            height: dp(34)
+                            spacing: dp(8)
+                            Label:
+                                text: "No account?"
+                                font_size: sp(13)
+                                color: 0.35, 0.35, 0.35, 1
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                            Button:
+                                text: 'Create one'
+                                size_hint_x: None
+                                width: dp(110)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                color: 0.25, 0.45, 0.60, 1
+                                font_size: sp(13)
+                                on_release: app.root.current = 'register'
+
+                        Button:
+                            text: 'Back to Home'
+                            size_hint_y: None
+                            height: dp(40)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            color: 0.35, 0.35, 0.35, 1
+                            font_size: sp(13)
+                            on_release: app.root.current = 'home'
+
+<RegisterScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 0.973, 0.976, 0.980, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Top navbar
+        BoxLayout:
+            size_hint_y: None
+            height: dp(62)
+            padding: [dp(16), 0]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 1, 0.84, 0, 0.25
+                Rectangle:
+                    pos: self.x, self.y
+                    size: self.width, dp(2)
+            Label:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                font_size: sp(26)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: [dp(16), dp(24)]
+                spacing: dp(16)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(12)
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_x: None
+                    width: min(root.width - dp(32), dp(520))
+                    pos_hint: {'center_x': 0.5}
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: 0
+                    spacing: 0
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(10),]
+                        Color:
+                            rgba: 0, 0, 0, 0.10
+                        Line:
+                            width: 1.1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(10))
+
+                    # Form body
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [dp(16), dp(16)]
+                        spacing: dp(12)
+
+                        Label:
+                            text: '[b]Create account[/b]'
+                            markup: True
+                            font_size: sp(20)
+                            color: 0.15, 0.15, 0.15, 1
+                            size_hint_y: None
+                            height: dp(28)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+
+                        Label:
+                            text: 'Fill in your details to get started.'
+                            font_size: sp(13)
+                            color: 0.45, 0.45, 0.45, 1
+                            size_hint_y: None
+                            height: dp(18)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Profile Name'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: username_input
+                                hint_text: 'Choose a profile name'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Full Name'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: full_name_input
+                                hint_text: 'Enter your full name'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Email'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: email_input
+                                hint_text: 'Enter your email'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Phone'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: phone_input
+                                hint_text: 'Enter your phone number'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Address'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: address_input
+                                hint_text: 'Enter your address'
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Account Type'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            Spinner:
+                                id: role_input
+                                text: 'general'
+                                values: ['general', 'landlord']
+                                size_hint_y: None
+                                height: dp(46)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                color: 0, 0, 0, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Password'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: password_input
+                                hint_text: 'Enter your password'
+                                password: True
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: dp(74)
+                            spacing: dp(6)
+                            Label:
+                                text: 'Confirm Password'
+                                size_hint_y: None
+                                height: dp(18)
+                                font_size: sp(13)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                                color: 0.35, 0.35, 0.35, 1
+                            FormTextInput:
+                                id: confirm_password_input
+                                hint_text: 'Confirm your password'
+                                password: True
+                                multiline: False
+                                size_hint_y: None
+                                height: dp(46)
+                                padding: [dp(12), dp(12)]
+                                font_size: sp(15)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                foreground_color: 0, 0, 0, 1
+                                cursor_color: 0.25, 0.45, 0.60, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 1, 1, 1, 1
+                                    RoundedRectangle:
+                                        pos: self.pos
+                                        size: self.size
+                                        radius: [dp(6),]
+                                    Color:
+                                        rgba: 0, 0, 0, 0.16
+                                    Line:
+                                        width: 1
+                                        rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                        Label:
+                            id: register_status
+                            text: ''
+                            size_hint_y: None
+                            height: dp(22)
+                            color: 0.75, 0.2, 0.2, 1
+                            font_size: sp(13)
+
+                        Button:
+                            text: 'Create account'
+                            size_hint_y: None
+                            height: dp(46)
+                            background_normal: ''
+                            background_color: 1, 0.84, 0, 1
+                            color: 0, 0, 0, 1
+                            font_size: sp(15)
+                            bold: True
+                            on_release: root.do_register()
+
+                        BoxLayout:
+                            size_hint_y: None
+                            height: dp(34)
+                            spacing: dp(8)
+                            Label:
+                                text: 'Already have an account?'
+                                font_size: sp(13)
+                                color: 0.35, 0.35, 0.35, 1
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                            Button:
+                                text: 'Log in'
+                                size_hint_x: None
+                                width: dp(90)
+                                background_normal: ''
+                                background_color: 0, 0, 0, 0
+                                color: 0.25, 0.45, 0.60, 1
+                                font_size: sp(13)
+                                on_release: app.root.current = 'login'
+
+                        Button:
+                            text: 'Back to Home'
+                            size_hint_y: None
+                            height: dp(40)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            color: 0.35, 0.35, 0.35, 1
+                            font_size: sp(13)
+                            on_release: app.root.current = 'home'

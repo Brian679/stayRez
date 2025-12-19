@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* Light, responsive detail layout */
+.prop-gallery {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.prop-gallery::-webkit-scrollbar {
+  display: none;
+}
+
+.prop-thumb {
+  width: 120px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(0,0,0,0.1);
+  cursor: pointer;
+  background: #f8f9fa;
+}
+
+.prop-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contact-fixed {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  width: min(300px, calc(100% - 32px));
+  z-index: 1050;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+}
+
+.detail-page-pad {
+  padding-bottom: 96px;
+}
+
+/* Play Store-ish reviews */
+.reviews-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.reviews-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.reviews-score .score {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.reviews-score .outof {
+  color: #6c757d;
+}
+
+.star-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star-row i {
+  font-size: 16px;
+}
+
+.review-card {
+  padding: 14px 0;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.review-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #1e40af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.review-name {
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.review-date {
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.review-comment {
+  margin-top: 8px;
+  color: #6c757d;
+}
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rating-input button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+  color: #f59e0b;
+  font-size: 22px;
+}
+
+.rating-input button:focus-visible {
+  outline: 2px solid rgba(13,110,253,0.35);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+
+#map {
+  width: 100%;
+  height: 260px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+@media (min-width: 992px) {
+  #map { height: 220px; }
+
+  .prop-gallery-wrap {
+    width: 90%;
+  }
+
+  .prop-thumb {
+    height: 210px;
+  }
+}
+
+</style>
+
+<div class="container my-4">
+  <div class="detail-page-pad">
+    <div class="prop-gallery-wrap mx-auto">
+      <div class="prop-gallery" aria-label="Images">
+        {% for img in prop.images.all %}
+          <div class="prop-thumb" onclick="openImageModal('{{ img.image.url }}')">
+            <img src="{{ img.image.url }}" alt="{{ prop.title }}">
+          </div>
+        {% empty %}
+          <div class="prop-thumb d-flex align-items-center justify-content-center" style="color:#6c757d; font-size: 22px;">🏠</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="row g-4 mt-3 align-items-start">
+      <div class="col-12 col-lg-7">
+        <div class="d-flex align-items-start justify-content-between gap-3">
+          <div class="flex-grow-1">
+            <h1 class="h3 mb-1">{{ prop.title }}</h1>
+            <div class="text-muted">
+              {% if prop.location %}{{ prop.location }}{% elif prop.university %}{{ prop.university.name }}{% else %}Accommodation{% endif %}
+              {% if prop.distance_to_campus_km %} · {{ prop.distance_to_campus_km }} km to campus{% endif %}
+            </div>
+          </div>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'property-contact' prop.id %}" aria-label="Contact landlord">
+            <i class="bi bi-telephone"></i>
+          </a>
+        </div>
+
+        <div class="mt-3 fs-4 fw-bold">
+          {% if prop.price_per_month %}${{ prop.price_per_month }} <span class="text-muted fs-6 fw-normal">/ month</span>
+          {% elif prop.overnight and prop.nightly_price %}${{ prop.nightly_price }} <span class="text-muted fs-6 fw-normal">/ night</span>
+          {% else %}<span class="text-muted">Price not available</span>
+          {% endif %}
+        </div>
+
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h5 class="mb-2">Amenities</h5>
+            <div class="text-muted">
+              {{ prop.get_gender_display }} · {{ prop.get_sharing_display }}{% if prop.overnight %} · Overnight available{% endif %}
+              {% if prop.bedrooms %} · {{ prop.bedrooms }} Bedroom{{ prop.bedrooms|pluralize }}{% endif %}
+              {% if prop.square_meters %} · {{ prop.square_meters }} m²{% endif %}
+            </div>
+            {% if prop.amenities %}
+              <div class="mt-2">
+                {% for amenity in prop.amenities.split %}<span class="badge text-bg-light border me-1 mb-1">{{ amenity }}</span>{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <h5 class="mb-2">Description</h5>
+            <p class="mb-0 text-muted">{{ prop.description|default:"No description provided." }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-3">
+              <h5 class="mb-0">Location</h5>
+              {% if not has_paid %}
+                <span class="badge text-bg-warning">Limited</span>
+              {% endif %}
+            </div>
+            <div class="mt-3" id="map"></div>
+            <div class="text-muted small mt-2">
+              {% if prop.location %}{{ prop.location }}{% else %}Location available after admin fee payment{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <a class="btn btn-primary w-100 mt-3 d-none d-lg-block" href="{% url 'property-contact' prop.id %}">
+          <i class="bi bi-telephone me-2"></i>Contact landlord
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="reviews-summary">
+          <div>
+            <h5 class="mb-1">Reviews</h5>
+            <div class="text-muted small">What students say about this place</div>
+          </div>
+          {% if total_reviews > 0 %}
+            <div class="reviews-score" aria-label="Rating summary">
+              <div class="score">{{ average_rating|floatformat:1 }}</div>
+              <div>
+                <div class="star-row" aria-label="Average rating">
+                  {% for _ in "12345" %}
+                    {% if forloop.counter <= average_rating %}
+                      <i class="bi bi-star-fill text-warning"></i>
+                    {% else %}
+                      <i class="bi bi-star text-warning"></i>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <div class="outof small">{{ total_reviews }} review{{ total_reviews|pluralize }}</div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if total_reviews > 0 %}
+          <div class="mt-3">
+            {% for r in recent_reviews %}
+              <div class="review-card js-review-card {% if forloop.counter > 5 %}d-none js-review-extra{% endif %}" data-review-index="{{ forloop.counter }}">
+                <div class="review-head">
+                  <div class="review-user">
+                    <div class="review-avatar" aria-hidden="true">
+                      {% if r.user.username %}{{ r.user.username|first|upper }}{% else %}{{ r.user.email|first|upper }}{% endif %}
+                    </div>
+                    <div style="min-width:0;">
+                      <div class="review-name">{% if r.user.username %}{{ r.user.username|truncatechars:30 }}{% else %}{{ r.user.email|truncatechars:30 }}{% endif %}</div>
+                      <div class="review-meta">
+                        <div class="star-row" aria-label="Rating {{ r.rating }} out of 5">
+                          {% for _ in "12345" %}
+                            {% if forloop.counter <= r.rating %}
+                              <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                              <i class="bi bi-star text-warning"></i>
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                        <div class="review-date">{{ r.created_at|date:"M j, Y" }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="review-comment">{{ r.comment }}</div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="mt-2">
+            <button type="button" class="btn btn-link p-0 fw-bold" id="reviewsToggle" style="text-decoration:none;" aria-expanded="false">
+              Show more
+            </button>
+          </div>
+        {% else %}
+          <div class="mt-3 text-muted">No reviews yet.</div>
+        {% endif %}
+
+    {% if request.user.is_authenticated %}
+      {% if user_review %}
+        <div style="margin-top: 14px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 14px;">
+          <div class="d-flex align-items-center justify-content-between" style="gap: 12px;">
+            <div>
+              <div class="fw-bold">Your review</div>
+              <div class="text-muted small">You can only submit 1 review per accommodation.</div>
+            </div>
+            <form method="post" action="{% url 'web-property-review-delete' prop.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm">Remove review</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+      <form method="post" action="{% url 'web-property-reviews' prop.id %}" style="margin-top: 14px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 14px;">
+        {% csrf_token %}
+        <div style="margin-bottom: 12px;">
+          <label class="form-label fw-bold">Rating</label>
+          <div class="rating-input" role="radiogroup" aria-label="Select rating">
+            <button type="button" class="js-star" data-value="1" aria-label="1 star"><i class="bi bi-star"></i></button>
+            <button type="button" class="js-star" data-value="2" aria-label="2 stars"><i class="bi bi-star"></i></button>
+            <button type="button" class="js-star" data-value="3" aria-label="3 stars"><i class="bi bi-star"></i></button>
+            <button type="button" class="js-star" data-value="4" aria-label="4 stars"><i class="bi bi-star"></i></button>
+            <button type="button" class="js-star" data-value="5" aria-label="5 stars"><i class="bi bi-star-fill"></i></button>
+            <span class="text-muted small ms-2" id="ratingHint">Tap a star</span>
+          </div>
+
+          <select name="rating" class="visually-hidden" required aria-hidden="true" tabindex="-1" id="ratingSelect">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5" selected>5</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label class="form-label fw-bold">Your review</label>
+          <textarea name="comment" rows="3" class="form-control" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+      {% endif %}
+    {% else %}
+      <p class="text-muted" style="margin-top: 12px;"><a href="{% url 'web-login' %}?next={{ request.path|urlencode }}" class="link-primary fw-bold">Login</a> to write a review.</p>
+    {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<a class="btn btn-primary contact-fixed d-lg-none" href="{% url 'property-contact' prop.id %}" aria-label="Contact landlord">
+  <i class="bi bi-telephone me-2"></i>Contact landlord
+</a>
+
+<!-- Leaflet CSS for OpenStreetMap -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Initialize OpenStreetMap
+document.addEventListener('DOMContentLoaded', function() {
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+
+  {% if has_paid and prop.latitude and prop.longitude %}
+    var map = L.map('map').setView([{{ prop.latitude }}, {{ prop.longitude }}], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+    L.marker([{{ prop.latitude }}, {{ prop.longitude }}])
+      .addTo(map)
+      .bindPopup('<b>{{ prop.title }}</b><br>{{ prop.location|default:"Property Location" }}');
+  {% elif prop.university and prop.university.latitude and prop.university.longitude %}
+    var map = L.map('map').setView([{{ prop.university.latitude }}, {{ prop.university.longitude }}], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+    L.circle([{{ prop.university.latitude }}, {{ prop.university.longitude }}], {
+      color: '#0d6efd',
+      fillColor: '#0d6efd',
+      fillOpacity: 0.12,
+      radius: 2000
+    }).addTo(map);
+    L.marker([{{ prop.university.latitude }}, {{ prop.university.longitude }}])
+      .addTo(map)
+      .bindPopup('<b>{{ prop.university.name }}</b>');
+  {% else %}
+    mapEl.innerHTML = '<div class="d-flex align-items-center justify-content-center" style="height:260px;color:#6c757d;">Location map available after admin fee payment</div>';
+  {% endif %}
+});
+
+function openImageModal(url) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width: 92%; max-height: 92%; border-radius: 14px; box-shadow: 0 12px 48px rgba(0,0,0,0.55);';
+  modal.appendChild(img);
+  modal.onclick = () => document.body.removeChild(modal);
+  document.body.appendChild(modal);
+}
+
+// Star rating input (maps to hidden <select name="rating">)
+document.addEventListener('DOMContentLoaded', function () {
+  const select = document.getElementById('ratingSelect');
+  const stars = Array.from(document.querySelectorAll('.js-star'));
+  if (!select || stars.length === 0) return;
+
+  function setRating(value) {
+    const v = Math.max(1, Math.min(5, Number(value || 5)));
+    select.value = String(v);
+
+    stars.forEach((btn) => {
+      const n = Number(btn.dataset.value);
+      const icon = btn.querySelector('i');
+      if (!icon) return;
+      icon.classList.toggle('bi-star-fill', n <= v);
+      icon.classList.toggle('bi-star', n > v);
+    });
+  }
+
+  stars.forEach((btn) => {
+    btn.addEventListener('click', () => setRating(btn.dataset.value));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setRating(btn.dataset.value);
+      }
+    });
+  });
+
+  setRating(select.value);
+});
+
+// Reviews show more/less (only if >5)
+document.addEventListener('DOMContentLoaded', function () {
+  const toggle = document.getElementById('reviewsToggle');
+  const extra = Array.from(document.querySelectorAll('.js-review-extra'));
+  if (!toggle) return;
+
+  if (extra.length === 0) {
+    toggle.classList.add('d-none');
+    return;
+  }
+
+  let expanded = false;
+  function render() {
+    extra.forEach((el) => el.classList.toggle('d-none', !expanded));
+    toggle.textContent = expanded ? 'Show less' : 'Show more';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
+  toggle.addEventListener('click', function () {
+    expanded = !expanded;
+    render();
+  });
+
+  render();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,999 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+  line-height: 1.5;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+h2 {
+  font-size: clamp(22px, 3.5vw + 1vh, 36px);
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: #666;
+  margin-bottom: 18px;
+}
+
+.filters-bar {
+  background: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  color: #333;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.filter-btn:hover {
+  border-color: #FF385C;
+  background: #fff8f8;
+  color: #333;
+}
+
+.filter-btn.active {
+  background: #FF385C;
+  border-color: #FF385C;
+  color: white;
+}
+
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.property-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #ebebeb;
+  display: flex;
+  flex-direction: column;
+}
+
+.property-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  border-color: #ddd;
+}
+
+.property-card-image {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  background: #eaeaea;
+}
+
+.property-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.property-type-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.property-card-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.property-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-location {
+  font-size: 14px;
+  color: #717171;
+}
+
+.property-description {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #222;
+  margin-top: 6px;
+}
+
+.price-period {
+  font-weight: 500;
+  font-size: 13px;
+  color: #717171;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #717171;
+}
+
+.empty-state svg {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+  color: #ddd;
+}
+</style>
+
+<div class="content-wrapper">
+  <h2>{% if city %}{{ city.name }}{% else %}Real Estate{% endif %} – Properties</h2>
+  <p class="subtitle">
+    {% if city %}
+      {{ properties.count }} listing{{ properties.count|pluralize }} in {{ city.name }}
+    {% else %}
+      Browse available resorts, lodges, and shops
+    {% endif %}
+  </p>
+
+  <div class="filters-bar">
+    <a href="?{% if city %}city={{ city.id }}{% endif %}" class="filter-btn {% if not property_subtype %}active{% endif %}">All</a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=resort" class="filter-btn {% if property_subtype == 'resort' %}active{% endif %}">🏖️ Resorts</a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=real_estate" class="filter-btn {% if property_subtype == 'real_estate' %}active{% endif %}">🏕️ Lodges</a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=shop" class="filter-btn {% if property_subtype == 'shop' %}active{% endif %}">🏪 Shops</a>
+  </div>
+
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <a href="{% url 'web-property-detail' property.id %}" class="property-card">
+      <div class="property-card-image">
+        {% if property.images.first %}
+        <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+        {% else %}
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e0e0e0' width='400' height='300'/%3E%3Ctext fill='%23999' font-family='Arial' font-size='18' x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle'%3E{{ property.title }}%3C/text%3E%3C/svg%3E" alt="{{ property.title }}">
+        {% endif %}
+
+        <span class="property-type-badge">
+          {% if property.property_type == 'resort' %}🏖️ Resort
+          {% elif property.property_type == 'real_estate' %}🏕️ Lodge
+          {% elif property.property_type == 'shop' %}🏪 Shop
+          {% else %}{{ property.get_property_type_display }}{% endif %}
+        </span>
+      </div>
+      <div class="property-card-content">
+        <div class="property-title">{{ property.title }}</div>
+        <div class="property-location">📍 {{ property.city.name|default:"Location" }}{% if property.location %}, {{ property.location }}{% endif %}</div>
+        <div class="property-description">{{ property.description|truncatewords:18 }}</div>
+        <div class="property-price">
+          {% if property.nightly_price %}
+          ${{ property.nightly_price|floatformat:0 }} <span class="price-period">/night</span>
+          {% elif property.price_per_month %}
+          ${{ property.price_per_month|floatformat:0 }} <span class="price-period">/month</span>
+          {% else %}
+          Contact
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+    <p style="font-size: 16px;">No properties found matching your criteria</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% comment %}
+  margin-bottom: clamp(16px, 2vh, 24px);
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: #666;
+  margin-bottom: clamp(20px, 3vh, 30px);
+}
+
+/* Filters Bar */
+.filters-bar {
+  background: #fff;
+  padding: clamp(12px, 2vh, 20px);
+  border-radius: 12px;
+  margin-bottom: clamp(20px, 3vh, 30px);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 24px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: clamp(12px, 1.6vw, 14px);
+  color: #333;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.filter-btn:hover {
+  border-color: #FF385C;
+  background: #fff8f8;
+  text-decoration: none;
+  color: #333;
+}
+
+.filter-btn.active {
+  background: #FF385C;
+  border-color: #FF385C;
+  color: white;
+}
+
+/* Properties Grid */
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+@media (max-width: 576px) {
+  .properties-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Property Card - Airbnb Style */
+.property-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #ebebeb;
+  display: flex;
+  flex-direction: column;
+}
+
+.property-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  text-decoration: none;
+  color: inherit;
+  border-color: #ddd;
+}
+
+.property-card-image {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.property-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.property-card:hover .property-card-image img {
+  transform: scale(1.05);
+}
+
+.property-type-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: clamp(11px, 1.4vw, 13px);
+  font-weight: 600;
+  color: #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.property-card-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.property-title {
+  font-size: clamp(15px, 2vw, 18px);
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.property-location {
+  font-size: clamp(13px, 1.6vw, 15px);
+  color: #717171;
+  margin-bottom: 4px;
+}
+
+.property-description {
+  font-size: clamp(12px, 1.5vw, 14px);
+  color: #555;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.property-price {
+  font-size: clamp(16px, 2.2vw, 20px);
+  font-weight: 700;
+  color: #222;
+  margin-top: auto;
+}
+
+.price-period {
+  font-weight: 400;
+  font-size: clamp(13px, 1.6vw, 15px);
+  color: #717171;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: clamp(40px, 8vh, 80px) 20px;
+  color: #999;
+}
+
+.empty-state svg {
+  width: clamp(60px, 10vw, 100px);
+  height: clamp(60px, 10vw, 100px);
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+</style>
+
+<div class="content-wrapper">
+  <h2>{{ city.name|default:"Real Estate" }} - Properties</h2>
+  <p class="subtitle">
+    {% if city %}
+      {{ properties.count }} {% if properties.count == 1 %}property{% else %}properties{% endif %} in {{ city.name }}
+    {% else %}
+      Browse available resorts, lodges, and shops
+    {% endif %}
+  </p>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <a href="?{% if city %}city={{ city.id }}{% endif %}" class="filter-btn {% if not property_subtype %}active{% endif %}">
+      All
+    </a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=resort" class="filter-btn {% if property_subtype == 'resort' %}active{% endif %}">
+      🏖️ Resorts
+    </a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=lodge" class="filter-btn {% if property_subtype == 'lodge' %}active{% endif %}">
+      🏕️ Lodges
+    </a>
+    <a href="?{% if city %}city={{ city.id }}&{% endif %}subtype=shop" class="filter-btn {% if property_subtype == 'shop' %}active{% endif %}">
+      🏪 Shops
+    </a>
+  </div>
+
+  {% if properties %}
+  <div class="properties-grid">
+    {% for property in properties %}
+    <a href="{% url 'web-property-detail' property.id %}" class="property-card">
+      <div class="property-card-image">
+        {% if property.thumbnail %}
+}
+
+.city-dropdown::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.city-dropdown-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-decoration: none;
+  color: #333;
+  display: block;
+  font-size: 13px;
+}
+
+.city-dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.city-dropdown-item.active {
+  background: #FF385C;
+  font-weight: 600;
+  color: #fff;
+}
+
+@media (max-width: 576px) {
+  .city-selector-banner {
+    top: 15px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    max-width: 180px;
+    z-index: 1100;
+  }
+  
+  .city-dropdown {
+    top: 50px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: 220px;
+  }
+}
+
+/* Fixed Search Bar */
+.search-bar {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 600px;
+  width: 90%;
+  background: transparent;
+  padding: 0;
+  z-index: 999;
+}
+
+@media (max-width: 576px) {
+  .search-bar {
+    top: 70px;
+    max-width: 90%;
+  }
+}
+
+.search-input {
+  border-radius: 25px;
+  padding: 10px 18px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  background: #fff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.search-input:focus {
+  border-color: #FF385C;
+  box-shadow: 0 2px 8px rgba(255,56,92,0.15);
+  outline: none;
+}
+
+.search-btn {
+  border-radius: 25px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: #FF385C;
+  color: #fff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.search-btn:hover {
+  background: #e0315a;
+  box-shadow: 0 2px 8px rgba(255,56,92,0.3);
+}
+
+/* Fixed Bottom Filter Panel - Airbnb Style */
+.filter-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: clamp(60px, 10vh, 80px);
+  background: #fff;
+  border-top: 1px solid #ebebeb;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 0 clamp(8px, 2vw, 20px);
+  gap: clamp(6px, 1.5vw, 12px);
+  z-index: 999;
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
+}
+
+.filter-btn {
+  flex: 1 1 auto;
+  min-width: clamp(60px, 10vw + 2vh, 110px);
+  padding: clamp(6px, 1.5vh + 0.3vw, 12px) clamp(6px, 1.5vw + 0.3vh, 16px);
+  border: 1px solid #ddd;
+  border-radius: 50px;
+  background: #fff;
+  font-size: clamp(10px, 1.4vw + 0.3vh, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  text-align: center;
+  color: #222;
+}
+
+.filter-btn.active {
+  background: #222;
+  color: #fff;
+  border-color: #222;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filter-btn:hover:not(.active) {
+  border-color: #222;
+  background: #f7f7f7;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+/* Content wrapper */
+.content-wrapper {
+  padding-top: calc(10vh + 80px);
+  padding-bottom: calc(10vh + 30px);
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+}
+
+@media (max-width: 576px) {
+  .content-wrapper {
+    padding-left: 2.5vw;
+    padding-right: 2.5vw;
+  }
+}
+
+/* Responsive typography */
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fff;
+  line-height: 1.5;
+}
+
+h2 {
+  font-size: clamp(20px, 3.5vw + 1vh, 36px);
+  font-weight: 700;
+  margin-bottom: clamp(16px, 3vh, 30px);
+  color: #222;
+}
+
+/* Property Grid - Airbnb Style */
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 40px 24px;
+  margin-top: 24px;
+}
+
+@media (max-width: 768px) {
+  .properties-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .properties-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1201px) {
+  .properties-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Property Card - Airbnb Design */
+.property-card {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.property-card:hover {
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.property-image-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 66.67%; /* 3:2 aspect ratio */
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.property-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.property-card:hover .property-image {
+  transform: scale(1.05);
+}
+
+.property-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #222;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.property-badge.resort {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.property-badge.lodge {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff;
+}
+
+.property-badge.shop {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #fff;
+}
+
+.property-info {
+  padding-top: 12px;
+}
+
+.property-location {
+  font-size: 14px;
+  color: #717171;
+  margin-bottom: 4px;
+}
+
+.property-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-description {
+  font-size: 14px;
+  color: #717171;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-price {
+  font-size: 16px;
+  color: #222;
+  margin-top: 8px;
+}
+
+        {% if property.thumbnail %}
+        <img src="{{ property.thumbnail.url }}" alt="{{ property.title }}">
+        {% elif property.images.first %}
+        <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}">
+        {% else %}
+        <img src="/static/images/placeholder.jpg" alt="{{ property.title }}">
+        {% endif %}
+        
+        <span class="property-type-badge">
+          {% if property.property_subtype == 'resort' %}🏖️ Resort
+          {% elif property.property_subtype == 'lodge' %}🏕️ Lodge
+          {% elif property.property_subtype == 'shop' %}🏪 Shop
+          {% else %}{{ property.get_property_subtype_display }}{% endif %}
+        </span>
+      </div>
+      <div class="property-card-content">
+        <h5 class="property-title">{{ property.title }}</h5>
+        <div class="property-location">
+          📍 {{ property.city.name|default:"Location" }}
+        </div>
+        <div class="property-description">
+          {{ property.description|truncatewords:20 }}
+        </div>
+        <div class="property-price">
+          ${{ property.price_per_month|default:"Contact" }}
+          {% if property.price_per_month %}
+          <span class="price-period">/month</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+    <p style="font-size: clamp(14px, 2vw, 16px);">No properties found matching your criteria</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+<!-- City Selector Banner -->
+<div class="city-selector-banner" id="citySelectorBanner">
+  <div class="current-city">📍 <span id="currentCityName">{{ city_name }}</span></div>
+</div>
+
+<!-- City Dropdown -->
+<div class="city-dropdown" id="cityDropdown">
+  <!-- Populated dynamically -->
+</div>
+
+<!-- Search Bar -->
+<div class="search-bar">
+  <div class="input-group">
+    <input type="text" class="form-control search-input" id="searchInput" placeholder="Search properties...">
+    <button class="btn search-btn" id="searchBtn">Search</button>
+  </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="filter-panel">
+  <button class="filter-btn active" data-type="all">All</button>
+  <button class="filter-btn" data-type="resort">🏖️ Resorts</button>
+  <button class="filter-btn" data-type="lodge">🏠 Lodges</button>
+  <button class="filter-btn" data-type="shop">🏪 Shops</button>
+</div>
+
+<!-- Main Content -->
+<div class="content-wrapper">
+  <h2 id="pageTitle">Real Estate in {{ city_name }}</h2>
+  
+  <div id="propertiesContainer">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 16px; color: #717171;">Loading properties...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const cityName = "{{ city_name }}";
+let allProperties = [];
+let currentFilter = 'all';
+let searchQuery = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadProperties();
+  loadCities();
+  
+  // City selector toggle
+  document.getElementById('citySelectorBanner').addEventListener('click', function() {
+    document.getElementById('cityDropdown').classList.toggle('show');
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.city-selector-banner') && !e.target.closest('.city-dropdown')) {
+      document.getElementById('cityDropdown').classList.remove('show');
+    }
+  });
+  
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentFilter = this.dataset.type;
+      filterProperties();
+    });
+  });
+  
+  // Search
+  document.getElementById('searchBtn').addEventListener('click', function() {
+    searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    filterProperties();
+  });
+  
+  document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      searchQuery = this.value.toLowerCase();
+      filterProperties();
+    }
+  });
+});
+
+function loadProperties() {
+  const container = document.getElementById('propertiesContainer');
+  
+  fetch(`/api/properties/?property_type=longterm&city=${encodeURIComponent(cityName)}`)
+    .then(response => response.json())
+    .then(data => {
+      allProperties = data.results || data;
+      filterProperties();
+    })
+    .catch(error => {
+      console.error('Error loading properties:', error);
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <h3 class="empty-state-title">Failed to load properties</h3>
+          <p class="empty-state-text">Please try again later</p>
+        </div>
+      `;
+    });
+}
+
+function loadCities() {
+  fetch('/api/properties/?property_type=longterm')
+    .then(response => response.json())
+    .then(data => {
+      const properties = data.results || data;
+      const cities = [...new Set(properties.map(p => p.city).filter(c => c))].sort();
+      
+      const dropdown = document.getElementById('cityDropdown');
+      dropdown.innerHTML = cities.map(city => `
+        <a href="/realestate/city/${encodeURIComponent(city)}/" class="city-dropdown-item ${city === cityName ? 'active' : ''}">
+          📍 ${city}
+        </a>
+      `).join('');
+    });
+}
+
+function filterProperties() {
+  let filtered = allProperties;
+  
+  // Filter by type
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(p => 
+      p.property_subtype && p.property_subtype.toLowerCase() === currentFilter.toLowerCase()
+    );
+  }
+  
+  // Filter by search query
+  if (searchQuery) {
+    filtered = filtered.filter(p => 
+      p.title.toLowerCase().includes(searchQuery) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery)) ||
+      (p.city && p.city.toLowerCase().includes(searchQuery))
+    );
+  }
+  
+  displayProperties(filtered);
+}
+
+function displayProperties(properties) {
+  const container = document.getElementById('propertiesContainer');
+  
+  if (properties.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🏘️</div>
+        <h3 class="empty-state-title">No properties found</h3>
+        <p class="empty-state-text">Try adjusting your filters or search</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const html = `
+    <div class="properties-grid">
+      ${properties.map(prop => {
+        const subtype = prop.property_subtype || 'property';
+        const badgeClass = subtype.toLowerCase();
+        const icon = badgeClass === 'resort' ? '🏖️' : badgeClass === 'lodge' ? '🏠' : badgeClass === 'shop' ? '🏪' : '🏢';
+        
+        return `
+          <a href="/property/${prop.id}/" class="property-card">
+            <div class="property-image-container">
+              <img src="${prop.thumbnail || ''}" alt="${prop.title}" class="property-image" onerror="this.style.display='block'">
+              <div class="property-badge ${badgeClass}">${icon} ${subtype}</div>
+            </div>
+            <div class="property-info">
+              <div class="property-location">📍 ${prop.city || 'Location not specified'}</div>
+              <div class="property-title">${prop.title}</div>
+              <div class="property-description">${prop.description ? (prop.description.substring(0, 60) + '...') : 'No description'}</div>
+              <div class="property-price">
+                <span class="amount">$${prop.price_per_month || 'N/A'}</span>
+                <span class="period">per month</span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('')}
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+</script>
+
+{% endblock %}
+{% endcomment %}

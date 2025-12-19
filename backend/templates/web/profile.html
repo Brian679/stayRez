@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="/static/admin/css/base.css">
+  <link rel="stylesheet" href="/static/admin/css/forms.css">
+  <link rel="stylesheet" href="/static/admin/css/responsive.css">
+  <style>
+    /* Keep offRez spacing while using admin form styling */
+    .offrez-admin-wrap { max-width: 980px; margin: 0 auto; }
+    .offrez-admin-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; }
+    .offrez-muted { color: #6c757d; }
+
+    /* Profile form: label (left) / input (right) */
+    .offrez-admin-wrap form.aligned .form-row > div {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .offrez-admin-wrap form.aligned .form-row > div > label {
+      flex: 0 0 180px;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .offrez-admin-wrap form.aligned .form-row > div > input,
+    .offrez-admin-wrap form.aligned .form-row > div > select,
+    .offrez-admin-wrap form.aligned .form-row > div > textarea,
+    .offrez-admin-wrap form.aligned .form-row > div > .readonly {
+      flex: 1 1 0;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    /* Django renders errors before the label; make them take the full row */
+    .offrez-admin-wrap form.aligned .form-row > div > .errorlist {
+      flex: 0 0 100%;
+      margin: 0;
+      padding-left: 0;
+      list-style: none;
+      color: #b32d2e;
+    }
+
+    /* Small devices: slightly narrower label column */
+    @media (max-width: 576px) {
+      .offrez-admin-wrap form.aligned .form-row > div > label {
+        flex-basis: 120px;
+      }
+    }
+
+    /* Mobile button sizing */
+    @media (max-width: 576px) {
+      .offrez-profile-header {
+        gap: 10px;
+      }
+
+      .offrez-profile-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .offrez-profile-actions .button {
+        width: auto;
+        text-align: center;
+        padding: 6px 8px;
+        font-size: 12px;
+        line-height: 1.15;
+        white-space: nowrap;
+      }
+
+      .submit-row input[type="submit"],
+      .submit-row input[type="button"],
+      .submit-row button {
+        width: 100%;
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+
+      .offrez-card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px;
+      }
+
+      .offrez-card-header .button {
+        width: 100%;
+        text-align: center;
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+
+      .offrez-admin-wrap td.text-end {
+        white-space: normal;
+      }
+
+      .offrez-admin-wrap td.text-end .button {
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+        margin: 6px 0;
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="offrez-admin-wrap">
+  <div class="d-flex align-items-center justify-content-between mb-3 offrez-profile-header">
+    <h2 class="m-0">Profile</h2>
+    <div class="d-flex gap-2 offrez-profile-actions">
+      <a class="button" href="{% url 'web-password-change' %}">Change password</a>
+      <a class="button" href="{% url 'web-password-reset' %}">Reset password</a>
+    </div>
+  </div>
+
+  <div class="offrez-admin-card mb-4">
+    <form method="post" class="aligned">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        <div class="form-row">
+          <div>
+            {{ form.email.errors }}
+            <label for="id_email">Email</label>
+            {{ form.email }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>Role</label>
+            <div class="readonly">{{ request.user.get_role_display }}</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            {{ form.username.errors }}
+            <label for="id_username">Username</label>
+            {{ form.username }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            {{ form.full_name.errors }}
+            <label for="id_full_name">Full name</label>
+            {{ form.full_name }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            {{ form.phone_number.errors }}
+            <label for="id_phone_number">Phone number</label>
+            {{ form.phone_number }}
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            {{ form.address.errors }}
+            <label for="id_address">Address</label>
+            {{ form.address }}
+          </div>
+        </div>
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Save profile" class="default">
+      </div>
+    </form>
+  </div>
+
+  <div class="offrez-admin-card mb-4">
+    <h3 class="mb-2">Booking history</h3>
+    <p class="offrez-muted">Houses you unlocked contact details for.</p>
+
+    {% if booking_history %}
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Booked at</th>
+            <th>House</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cv in booking_history %}
+            <tr>
+              <td>{{ cv.viewed_at }}</td>
+              <td>
+                <a href="{% url 'web-property-detail' cv.property.id %}">{{ cv.property.title }}</a>
+              </td>
+              <td>{{ cv.property.get_property_type_display }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="offrez-muted m-0">No bookings yet.</p>
+    {% endif %}
+  </div>
+
+  {% if is_landlord %}
+    <h3 class="mb-2">Landlord dashboard</h3>
+
+    <div class="offrez-admin-card mb-4">
+      <div class="d-flex align-items-center justify-content-between mb-2 offrez-card-header">
+        <h4 class="m-0">My properties</h4>
+        <a class="button default" href="{% url 'dashboard-add-property' %}">Add property</a>
+      </div>
+
+      {% if landlord_properties %}
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in landlord_properties %}
+              <tr>
+                <td>{{ p.title }}</td>
+                <td>{{ p.get_property_type_display }}</td>
+                <td>
+                  {% if p.is_approved %}
+                    <span class="text-success">Approved</span>
+                  {% else %}
+                    <span class="offrez-muted">Pending approval</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a class="button" href="{% url 'dashboard-edit-property' p.id %}">Edit</a>
+                  <a class="button deletelink" href="{% url 'dashboard-delete-property' p.id %}">Delete</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="offrez-muted m-0">No properties yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="offrez-admin-card">
+      <h4 class="mb-2">Booking / inquiry history</h4>
+      <p class="offrez-muted">This shows when users unlocked contact details for your listings.</p>
+      {% if landlord_activity %}
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Viewed at</th>
+              <th>Property</th>
+              <th>Viewer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cv in landlord_activity %}
+              <tr>
+                <td>{{ cv.viewed_at }}</td>
+                <td>{{ cv.property.title }}</td>
+                <td>{% if cv.payment.user.username %}{{ cv.payment.user.username }}{% else %}{{ cv.payment.user.email }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="offrez-muted m-0">No activity yet.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

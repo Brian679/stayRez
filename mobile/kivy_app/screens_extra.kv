@@ -1,0 +1,1172 @@
+#:import dp kivy.metrics.dp
+#:import sp kivy.metrics.sp
+
+<ProfileScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 0
+        spacing: 0
+        canvas.before:
+            Color:
+                rgba: 0.973, 0.976, 0.980, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Web-like fixed navbar
+        BoxLayout:
+            size_hint_y: None
+            height: dp(62)
+            padding: [dp(16), 0]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 1, 0.84, 0, 0.25
+                Rectangle:
+                    pos: self.x, self.y
+                    size: self.width, dp(2)
+            Button:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(26)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+                on_release: app.root.current = 'home'
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Logout'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 1, 0.84, 0, 1
+                color: 0, 0, 0, 1
+                font_size: sp(13)
+                bold: True
+                on_release: app.do_logout()
+
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                padding: [dp(16), dp(18)]
+                spacing: dp(16)
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_x: None
+                    width: min(root.width - dp(32), dp(560))
+                    pos_hint: {'center_x': 0.5}
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(16)]
+                    spacing: dp(14)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(10),]
+                        Color:
+                            rgba: 0, 0, 0, 0.10
+                        Line:
+                            width: 1.1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(10))
+
+                    Label:
+                        text: '[b]My profile[/b]'
+                        markup: True
+                        font_size: sp(20)
+                        color: 0.15, 0.15, 0.15, 1
+                        size_hint_y: None
+                        height: dp(28)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: email_display
+                        text: ''
+                        size_hint_y: None
+                        height: dp(22)
+                        font_size: sp(13)
+                        color: 0.35, 0.35, 0.35, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: role_display
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(12)
+                        color: 0.5, 0.5, 0.5, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: profile_status
+                        text: ''
+                        size_hint_y: None
+                        height: dp(20)
+                        font_size: sp(13)
+                        color: 0.8, 0.3, 0.3, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    # Editable fields
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(74)
+                        spacing: dp(6)
+                        Label:
+                            text: 'Profile Name'
+                            size_hint_y: None
+                            height: dp(18)
+                            font_size: sp(13)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+                            color: 0.35, 0.35, 0.35, 1
+                        FormTextInput:
+                            id: username_input
+                            multiline: False
+                            size_hint_y: None
+                            height: dp(46)
+                            padding: [dp(12), dp(12)]
+                            font_size: sp(15)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            foreground_color: 0, 0, 0, 1
+                            cursor_color: 0.25, 0.45, 0.60, 1
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 1, 1, 1
+                                RoundedRectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                    radius: [dp(6),]
+                                Color:
+                                    rgba: 0, 0, 0, 0.16
+                                Line:
+                                    width: 1
+                                    rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(74)
+                        spacing: dp(6)
+                        Label:
+                            text: 'Full Name'
+                            size_hint_y: None
+                            height: dp(18)
+                            font_size: sp(13)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+                            color: 0.35, 0.35, 0.35, 1
+                        FormTextInput:
+                            id: full_name_input
+                            multiline: False
+                            size_hint_y: None
+                            height: dp(46)
+                            padding: [dp(12), dp(12)]
+                            font_size: sp(15)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            foreground_color: 0, 0, 0, 1
+                            cursor_color: 0.25, 0.45, 0.60, 1
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 1, 1, 1
+                                RoundedRectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                    radius: [dp(6),]
+                                Color:
+                                    rgba: 0, 0, 0, 0.16
+                                Line:
+                                    width: 1
+                                    rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(74)
+                        spacing: dp(6)
+                        Label:
+                            text: 'Phone'
+                            size_hint_y: None
+                            height: dp(18)
+                            font_size: sp(13)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+                            color: 0.35, 0.35, 0.35, 1
+                        FormTextInput:
+                            id: phone_input
+                            multiline: False
+                            size_hint_y: None
+                            height: dp(46)
+                            padding: [dp(12), dp(12)]
+                            font_size: sp(15)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            foreground_color: 0, 0, 0, 1
+                            cursor_color: 0.25, 0.45, 0.60, 1
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 1, 1, 1
+                                RoundedRectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                    radius: [dp(6),]
+                                Color:
+                                    rgba: 0, 0, 0, 0.16
+                                Line:
+                                    width: 1
+                                    rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(74)
+                        spacing: dp(6)
+                        Label:
+                            text: 'Address'
+                            size_hint_y: None
+                            height: dp(18)
+                            font_size: sp(13)
+                            halign: 'left'
+                            valign: 'middle'
+                            text_size: self.size
+                            color: 0.35, 0.35, 0.35, 1
+                        FormTextInput:
+                            id: address_input
+                            multiline: False
+                            size_hint_y: None
+                            height: dp(46)
+                            padding: [dp(12), dp(12)]
+                            font_size: sp(15)
+                            background_normal: ''
+                            background_color: 0, 0, 0, 0
+                            foreground_color: 0, 0, 0, 1
+                            cursor_color: 0.25, 0.45, 0.60, 1
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 1, 1, 1
+                                RoundedRectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                    radius: [dp(6),]
+                                Color:
+                                    rgba: 0, 0, 0, 0.16
+                                Line:
+                                    width: 1
+                                    rounded_rectangle: (self.x, self.y, self.width, self.height, dp(6))
+
+                    Button:
+                        text: 'Save changes'
+                        size_hint_y: None
+                        height: dp(46)
+                        background_normal: ''
+                        background_color: 0.25, 0.45, 0.60, 1
+                        color: 1, 1, 1, 1
+                        font_size: sp(15)
+                        bold: True
+                        on_release: root.save_profile()
+
+                    Button:
+                        text: 'Change password'
+                        size_hint_y: None
+                        height: dp(42)
+                        background_normal: ''
+                        background_color: 0, 0, 0, 0
+                        color: 0.25, 0.45, 0.60, 1
+                        font_size: sp(13)
+                        on_release: root.open_change_password()
+
+                    # Admin fee status
+                    Label:
+                        text: '[b]Admin fee status[/b]'
+                        markup: True
+                        size_hint_y: None
+                        height: dp(26)
+                        font_size: sp(16)
+                        color: 0.15, 0.15, 0.15, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: admin_fee_status
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(13)
+                        color: 0.35, 0.35, 0.35, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: views_remaining_display
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(13)
+                        color: 0.35, 0.35, 0.35, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: valid_until_display
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(13)
+                        color: 0.35, 0.35, 0.35, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    # History
+                    Label:
+                        text: '[b]Booking / history[/b]'
+                        markup: True
+                        size_hint_y: None
+                        height: dp(26)
+                        font_size: sp(16)
+                        color: 0.15, 0.15, 0.15, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    BoxLayout:
+                        id: history_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(8)
+
+<ChangePasswordScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 16
+        spacing: 12
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: '56dp'
+            Button:
+                text: '← Back'
+                size_hint_x: None
+                width: '80dp'
+                background_color: 0, 0, 0, 0
+                color: 0, 0.4, 0.8, 1
+                on_release: root.go_back()
+            Label:
+                text: '[b]Change Password[/b]'
+                markup: True
+                font_size: '20sp'
+                color: 0, 0, 0, 1
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                orientation: 'vertical'
+                padding: [8, 12]
+                spacing: 12
+                size_hint_y: None
+                height: self.minimum_height
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: 6
+                    size_hint_y: None
+                    height: '76dp'
+                    Label:
+                        text: 'Current Password'
+                        size_hint_y: None
+                        height: '20dp'
+                        font_size: '13sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                        color: 0.3, 0.3, 0.3, 1
+                    FormTextInput:
+                        id: old_password_input
+                        password: True
+                        multiline: False
+                        size_hint_y: None
+                        height: '46dp'
+                        padding: [12, 12]
+                        font_size: '15sp'
+                        background_color: 0.95, 0.95, 0.95, 1
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: 6
+                    size_hint_y: None
+                    height: '76dp'
+                    Label:
+                        text: 'New Password'
+                        size_hint_y: None
+                        height: '20dp'
+                        font_size: '13sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                        color: 0.3, 0.3, 0.3, 1
+                    FormTextInput:
+                        id: new_password_input
+                        password: True
+                        multiline: False
+                        size_hint_y: None
+                        height: '46dp'
+                        padding: [12, 12]
+                        font_size: '15sp'
+                        background_color: 0.95, 0.95, 0.95, 1
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: 6
+                    size_hint_y: None
+                    height: '76dp'
+                    Label:
+                        text: 'Confirm New Password'
+                        size_hint_y: None
+                        height: '20dp'
+                        font_size: '13sp'
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+                        color: 0.3, 0.3, 0.3, 1
+                    FormTextInput:
+                        id: confirm_password_input
+                        password: True
+                        multiline: False
+                        size_hint_y: None
+                        height: '46dp'
+                        padding: [12, 12]
+                        font_size: '15sp'
+                        background_color: 0.95, 0.95, 0.95, 1
+
+                Button:
+                    text: 'Update Password'
+                    size_hint_y: None
+                    height: '50dp'
+                    background_color: 0, 0, 0, 1
+                    color: 1, 0.85, 0, 1
+                    font_size: '16sp'
+                    on_release: root.submit_change()
+
+                Label:
+                    id: change_password_status
+                    text: ''
+                    size_hint_y: None
+                    height: '30dp'
+                    color: 0, 0.6, 0, 1
+
+<NotificationsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 16
+        spacing: 12
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: '56dp'
+            Button:
+                text: '← Back'
+                size_hint_x: None
+                width: '80dp'
+                background_color: 0, 0, 0, 0
+                color: 0, 0.4, 0.8, 1
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Notifications[/b]'
+                markup: True
+                font_size: '22sp'
+                color: 0, 0, 0, 1
+        # Loading
+        Label:
+            id: notifications_loading
+            text: ''
+            size_hint_y: None
+            height: '30dp'
+            color: 0.5, 0.5, 0.5, 1
+        # Notifications List
+        ScrollView:
+            BoxLayout:
+                id: notifications_container
+                orientation: 'vertical'
+                padding: 8
+                spacing: 10
+                size_hint_y: None
+                height: self.minimum_height
+
+<MyPropertiesScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 0
+        spacing: 0
+        canvas.before:
+            Color:
+                rgba: 0.973, 0.976, 0.980, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # Top navbar (match web base.html feel)
+        BoxLayout:
+            size_hint_y: None
+            height: dp(62)
+            padding: [dp(16), 0]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 1, 0.84, 0, 0.25
+                Rectangle:
+                    pos: self.x, self.y
+                    size: self.width, dp(2)
+            Button:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(26)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+                on_release: app.root.current = 'home'
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+
+        ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: dp(12)
+                padding: [dp(12), dp(12), dp(12), dp(12)]
+
+                # My properties card
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+
+                    Label:
+                        text: '[b]My properties[/b]'
+                        markup: True
+                        font_size: sp(18)
+                        color: 0.13, 0.13, 0.13, 1
+                        size_hint_y: None
+                        height: dp(24)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: my_properties_loading
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(13)
+                        color: 0.5, 0.5, 0.5, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    BoxLayout:
+                        id: my_properties_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(10)
+
+                # Inquiry history card
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [dp(16), dp(14)]
+                    spacing: dp(10)
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(12),]
+                        Color:
+                            rgba: 0, 0, 0, 0.08
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(12))
+
+                    Label:
+                        text: '[b]Booking/inquiry history[/b]'
+                        markup: True
+                        font_size: sp(18)
+                        color: 0.13, 0.13, 0.13, 1
+                        size_hint_y: None
+                        height: dp(24)
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    Label:
+                        id: activity_loading
+                        text: ''
+                        size_hint_y: None
+                        height: dp(18)
+                        font_size: sp(13)
+                        color: 0.5, 0.5, 0.5, 1
+                        halign: 'left'
+                        valign: 'middle'
+                        text_size: self.size
+
+                    BoxLayout:
+                        id: activity_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(10)
+
+<PropertyContactScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 16
+        spacing: 12
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: None
+            height: '56dp'
+            Button:
+                text: '← Back'
+                size_hint_x: None
+                width: '80dp'
+                background_color: 0, 0, 0, 0
+                color: 0, 0.4, 0.8, 1
+                on_release: app.root.current = 'property_detail'
+            Label:
+                id: contact_title
+                text: '[b]Contact Landlord[/b]'
+                markup: True
+                font_size: '20sp'
+                color: 0, 0, 0, 1
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+        # Contact Content
+        ScrollView:
+            BoxLayout:
+                id: contact_container
+                orientation: 'vertical'
+                padding: 8
+                spacing: 16
+                size_hint_y: None
+                height: self.minimum_height
+
+<LocationListScreen>:
+    FloatLayout:
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        
+        # Off-Rez Header (fixed 10%)
+        BoxLayout:
+            size_hint: 1, 0.1
+            pos_hint: {'top': 1, 'x': 0}
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                color: 0.2, 0.2, 0.2, 1
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]off[/b][color=#ffd700]Rez[/color]'
+                markup: True
+                size_hint_x: 0.6
+                font_size: sp(20) if root.width < dp(600) else sp(24)
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        
+        # Cities List (90%)
+        BoxLayout:
+            size_hint: 1, 0.9
+            pos_hint: {'top': 0.9, 'x': 0}
+            orientation: 'vertical'
+            padding: 0
+            spacing: 0
+            
+            Label:
+                id: cities_loading
+                text: ''
+                size_hint_y: None
+                height: dp(40)
+                font_size: sp(14)
+                color: 1, 0.84, 0, 1
+            
+            ScrollView:
+                GridLayout:
+                    id: cities_grid
+                    cols: 1 if root.width < dp(600) else 2
+                    spacing: dp(16)
+                    padding: [dp(20), dp(16)]
+                    size_hint_y: None
+                    height: self.minimum_height
+
+<ShortTermScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Short-Term Rentals[/b]'
+                markup: True
+                font_size: sp(20)
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        # Cities Grid
+        ScrollView:
+            size_hint_y: 0.9
+            GridLayout:
+                id: cities_grid
+                cols: 1 if root.width < dp(600) else 2
+                spacing: dp(12)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height
+
+<RealEstateScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Real Estate[/b]'
+                markup: True
+                font_size: sp(20)
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        # Cities Grid
+        ScrollView:
+            size_hint_y: 0.9
+            GridLayout:
+                id: cities_grid
+                cols: 1 if root.width < dp(600) else 2
+                spacing: dp(12)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height
+
+<ResortsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Resorts & Vacations[/b]'
+                markup: True
+                font_size: sp(20)
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        # Cities Grid
+        ScrollView:
+            size_hint_y: 0.9
+            GridLayout:
+                id: cities_grid
+                cols: 1 if root.width < dp(600) else 2
+                spacing: dp(12)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height
+
+<ShopsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: app.root.current = 'home'
+            Label:
+                text: '[b]Shops to Rent[/b]'
+                markup: True
+                font_size: sp(20)
+                color: 0, 0, 0, 1
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.go_notifications()
+            Button:
+                text: 'Profile'
+                size_hint_x: None
+                width: dp(84)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(14)
+                color: 0, 0, 0, 1
+                on_release: app.go_profile()
+        # Cities Grid
+        ScrollView:
+            size_hint_y: 0.9
+            GridLayout:
+                id: cities_grid
+                cols: 1 if root.width < dp(600) else 2
+                spacing: dp(12)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height
+
+<ServicePropertiesScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        # Header
+        BoxLayout:
+            size_hint_y: 0.1
+            padding: [dp(12), dp(8)]
+            spacing: dp(8)
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+                Color:
+                    rgba: 0, 0, 0, 0.1
+                Rectangle:
+                    pos: self.x, self.y - dp(2)
+                    size: self.width, dp(2)
+            Button:
+                text: '←'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(24)
+                on_release: root.go_back()
+            Label:
+                id: service_heading
+                text: '[b]Properties[/b]'
+                markup: True
+                font_size: sp(18)
+                color: 0, 0, 0, 1
+                halign: 'left'
+                valign: 'middle'
+                text_size: self.size
+            Widget:
+            Button:
+                text: '🔔'
+                size_hint_x: None
+                width: dp(45)
+                background_normal: ''
+                background_color: 0, 0, 0, 0
+                font_size: sp(20)
+                on_release: app.root.current = 'notifications'
+        # Properties Grid
+        ScrollView:
+            size_hint_y: 0.9
+            GridLayout:
+                id: properties_grid
+                cols: 1 if root.width < dp(600) else 2
+                spacing: dp(12)
+                padding: [dp(12), dp(12)]
+                size_hint_y: None
+                height: self.minimum_height

@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Airbnb-inspired Long-term Accommodation Page */
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+  line-height: 1.5;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 576px) {
+  .content-wrapper {
+    padding-left: 2.5vw;
+    padding-right: 2.5vw;
+  }
+}
+
+h2 {
+  font-size: clamp(24px, 4vw + 1vh, 42px);
+  font-weight: 700;
+  margin-bottom: clamp(12px, 2vh, 20px);
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: clamp(14px, 2vw + 0.5vh, 18px);
+  color: #666;
+  margin-bottom: clamp(30px, 4vh, 50px);
+}
+
+/* City Cards Grid */
+.cities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: clamp(20px, 2.5vw, 28px);
+  margin-top: clamp(20px, 3vh, 40px);
+}
+
+@media (max-width: 576px) {
+  .cities-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Airbnb-style City Card */
+.city-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #ebebeb;
+}
+
+.city-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  text-decoration: none;
+  color: inherit;
+  border-color: #ddd;
+}
+
+.city-card-image {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.city-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.city-card:hover .city-card-image img {
+  transform: scale(1.08);
+}
+
+.city-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  padding: 24px 20px;
+  color: white;
+}
+
+.city-name {
+  font-size: clamp(20px, 2.8vw, 26px);
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.city-card-content {
+  padding: 18px 20px;
+}
+
+.property-count {
+  font-size: clamp(14px, 1.8vw, 16px);
+  color: #666;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.property-count strong {
+  color: #222;
+  font-weight: 600;
+}
+
+.price-range {
+  display: inline-flex;
+  align-items: center;
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: clamp(13px, 1.6vw, 15px);
+  color: #222;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.price-label {
+  font-size: clamp(11px, 1.4vw, 13px);
+  color: #717171;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.cta-text {
+  color: #FF385C;
+  font-weight: 600;
+  font-size: clamp(14px, 1.8vw, 16px);
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: gap 0.2s ease;
+}
+
+.city-card:hover .cta-text {
+  gap: 10px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: clamp(50px, 10vh, 100px) 20px;
+  color: #999;
+}
+
+.empty-state svg {
+  width: clamp(70px, 12vw, 120px);
+  height: clamp(70px, 12vw, 120px);
+  margin-bottom: 24px;
+  opacity: 0.3;
+}
+
+.empty-state-text {
+  font-size: clamp(15px, 2vw, 17px);
+  color: #666;
+  margin-top: 12px;
+}
+</style>
+
+<div class="content-wrapper">
+  <h2>Long-term Accommodation</h2>
+  <p class="subtitle">Find your perfect place to stay for extended periods</p>
+
+  {% if cities %}
+  <div class="cities-grid">
+    {% for city_data in cities %}
+    <a href="{% url 'longterm-properties' %}?city={{ city_data.city.id }}" class="city-card">
+      <div class="city-card-image">
+        {% if city_data.sample_image %}
+        <img src="{{ city_data.sample_image }}" alt="{{ city_data.city.name }}">
+        {% endif %}
+        <div class="city-card-overlay">
+          <div class="city-name">{{ city_data.city.name }}</div>
+        </div>
+      </div>
+      <div class="city-card-content">
+        <div class="property-count">
+          🏠 <strong>{{ city_data.count }}</strong> {% if city_data.count == 1 %}property{% else %}properties{% endif %} available
+        </div>
+        {% if city_data.min_price and city_data.max_price %}
+        <div class="price-range">
+          ${{ city_data.min_price|floatformat:0 }} - ${{ city_data.max_price|floatformat:0 }}
+          <span class="price-label">/ month</span>
+        </div>
+        {% endif %}
+        <div class="cta-text">
+          View properties →
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+    <p class="empty-state-text">No long-term accommodations available yet</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

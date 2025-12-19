@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Short-Term Properties - Find Your Stay{% endblock %}
+
+{% block content %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        color: #222;
+        background-color: #fff;
+        line-height: 1.5;
+    }
+
+    .container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: clamp(16px, 3vw, 40px) clamp(16px, 4vw, 80px);
+    }
+
+    .header-section {
+        margin-bottom: clamp(24px, 4vw, 32px);
+    }
+
+    .header-section h1 {
+        font-size: clamp(28px, 5vw, 40px);
+        font-weight: 700;
+        color: #222;
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+    }
+
+    .filter-bar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 20px 0;
+        border-bottom: 1px solid #EBEBEB;
+        margin-bottom: 32px;
+    }
+
+    .filter-btn {
+        padding: 10px 20px;
+        border: 1px solid #DDDDDD;
+        border-radius: 24px;
+        background: #fff;
+        color: #222;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: inherit;
+    }
+
+    .filter-btn:hover {
+        border-color: #222;
+        background: #F7F7F7;
+    }
+
+    .filter-btn.active {
+        background: #222;
+        color: #fff;
+        border-color: #222;
+    }
+
+    .properties-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: clamp(20px, 3vw, 40px) clamp(16px, 2vw, 24px);
+        margin-bottom: 48px;
+    }
+
+    .property-card {
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .property-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .property-image-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        background: #F7F7F7;
+    }
+
+    .property-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .property-card:hover .property-image {
+        transform: scale(1.05);
+    }
+
+    .property-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #222;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .property-info {
+        padding: 0 4px;
+    }
+
+    .property-location {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .property-city {
+        font-size: 15px;
+        font-weight: 600;
+        color: #222;
+    }
+
+    .property-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+        color: #222;
+    }
+
+    .property-rating svg {
+        width: 14px;
+        height: 14px;
+        fill: #222;
+    }
+
+    .property-title {
+        font-size: 15px;
+        color: #717171;
+        margin-bottom: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .property-dates {
+        font-size: 15px;
+        color: #717171;
+        margin-bottom: 8px;
+    }
+
+    .property-price {
+        font-size: 16px;
+        color: #222;
+    }
+
+    .property-price strong {
+        font-weight: 600;
+    }
+
+    .property-price span {
+        font-weight: 400;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: clamp(40px, 8vw, 80px) 20px;
+        color: #717171;
+    }
+
+    .empty-icon {
+        width: clamp(80px, 15vw, 120px);
+        height: clamp(80px, 15vw, 120px);
+        margin: 0 auto 24px;
+        opacity: 0.6;
+    }
+
+    .empty-state h2 {
+        font-size: clamp(20px, 3vw, 28px);
+        color: #222;
+        margin-bottom: 12px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        font-size: clamp(14px, 2vw, 16px);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 576px) {
+        .properties-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .filter-bar {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .filter-bar::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    @media (min-width: 600px) and (max-width: 900px) {
+        .properties-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 900px) and (max-width: 1200px) {
+        .properties-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .properties-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+    }
+</style>
+
+<div class="container">
+    <div class="header-section">
+        <h1>✨ Short-Term Stays{% if selected_city %} in {{ selected_city }}{% endif %}</h1>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn {% if not selected_city %}active{% endif %}" 
+                onclick="window.location.href='{% url 'shortterm-properties' %}'">
+            All Destinations
+        </button>
+        {% for city in cities %}
+        <button class="filter-btn {% if selected_city == city.name %}active{% endif %}"
+                onclick="window.location.href='{% url 'shortterm-properties' %}?city={{ city.name }}'">
+            {{ city.name }}
+        </button>
+        {% endfor %}
+    </div>
+
+    {% if properties %}
+    <div class="properties-grid">
+        {% for property in properties %}
+        <a href="{% url 'web-property-detail' property.pk %}" style="text-decoration: none; color: inherit;">
+            <div class="property-card">
+                <div class="property-image-wrapper">
+                    {% if property.images.first %}
+                    <img src="{{ property.images.first.image.url }}" alt="{{ property.title }}" class="property-image">
+                    {% else %}
+                    <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop" 
+                         alt="{{ property.title }}" class="property-image">
+                    {% endif %}
+                    <div class="property-badge">⭐ Short-Term</div>
+                </div>
+                <div class="property-info">
+                    <div class="property-location">
+                        <div class="property-city">{{ property.city.name }}{% if property.location %}, {{ property.location }}{% endif %}</div>
+                        {% if property.rating %}
+                        <div class="property-rating">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                            </svg>
+                            {{ property.rating }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="property-title">{{ property.title|truncatechars:50 }}</div>
+                    {% if property.max_occupancy %}
+                    <div class="property-dates">Up to {{ property.max_occupancy }} guest{{ property.max_occupancy|pluralize }}</div>
+                    {% endif %}
+                    <div class="property-price">
+                        <strong>${{ property.price|floatformat:0 }}</strong> <span>/ night</span>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" 
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h2>No Properties Found</h2>
+        <p>We couldn't find any short-term stays matching your criteria. Try adjusting your filters or browse all destinations.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Smooth scroll to top when filter is clicked
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+});
+</script>
+{% endblock %}
