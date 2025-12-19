@@ -79,6 +79,44 @@ def _get_active_service_or_404(service_slug):
     return get_object_or_404(Service, slug=service_slug, is_active=True)
 
 
+def _normalize_service_property_type(value: str) -> str:
+    """Normalize Service.property_type into a stable internal key."""
+    if not value:
+        return ""
+    v = str(value).strip().lower()
+    for ch in ("-", " ", "/"):
+        v = v.replace(ch, "_")
+    while "__" in v:
+        v = v.replace("__", "_")
+    return v
+
+
+_SERVICE_TYPE_ALIASES = {
+    "student": "students",
+    "students": "students",
+    "student_accommodation": "students",
+    "students_accommodation": "students",
+
+    "longterm": "long_term",
+    "long_term": "long_term",
+    "long_term_accommodation": "long_term",
+
+    "shortterm": "short_term",
+    "short_term": "short_term",
+    "short_term_accommodation": "short_term",
+
+    "realestate": "real_estate",
+    "real_estate": "real_estate",
+    "real_estate_accommodation": "real_estate",
+
+    "resorts": "resort",
+    "resort": "resort",
+
+    "shops": "shop",
+    "shop": "shop",
+}
+
+
 def service_entry(request, service_slug):
     """Entry point for any service, driven by Service.slug.
 
@@ -86,7 +124,10 @@ def service_entry(request, service_slug):
     - Others route to their city list page
     """
     service = _get_active_service_or_404(service_slug)
-    property_type = (service.property_type or '').strip()
+    property_type = _SERVICE_TYPE_ALIASES.get(
+        _normalize_service_property_type(service.property_type),
+        _normalize_service_property_type(service.property_type),
+    )
     if not property_type:
         return redirect('/')
 
@@ -114,7 +155,10 @@ def service_properties(request, service_slug):
     Students accommodation uses university-based lists instead.
     """
     service = _get_active_service_or_404(service_slug)
-    property_type = (service.property_type or '').strip()
+    property_type = _SERVICE_TYPE_ALIASES.get(
+        _normalize_service_property_type(service.property_type),
+        _normalize_service_property_type(service.property_type),
+    )
     if property_type == 'students':
         return redirect('service-entry', service_slug=service_slug)
 

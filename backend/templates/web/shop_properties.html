@@ -134,7 +134,7 @@ h2 {
 
 <div class="content-wrapper">
   <div class="breadcrumb">
-    <a href="{% url 'shop-cities' %}">← Back to cities</a>
+    <a href="{% if service_slug %}{% url 'service-entry' service_slug=service_slug %}{% else %}{% url 'shop-cities' %}{% endif %}">← Back to cities</a>
   </div>
 
   <h2>🏪 {% if city %}Shops in {{ city.name }}{% else %}All Shops{% endif %}</h2>
