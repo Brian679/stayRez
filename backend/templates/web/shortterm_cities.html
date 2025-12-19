@@ -186,7 +186,7 @@
     {% if cities %}
     <div class="cities-grid">
         {% for city in cities %}
-        <a href="{% url 'shortterm-properties' %}?city={{ city.name }}" style="text-decoration: none; color: inherit;">
+        <a href="{% if service_slug %}{% url 'service-properties' service_slug=service_slug %}?city={{ city.id }}{% else %}{% url 'shortterm-properties' %}?city={{ city.id }}{% endif %}" style="text-decoration: none; color: inherit;">
             <div class="city-card">
                 <div class="city-image-wrapper">
                     {% if city.image %}

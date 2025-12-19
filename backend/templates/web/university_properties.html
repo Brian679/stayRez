@@ -604,7 +604,7 @@ html {
 
 <div class="university-dropdown" id="universityDropdown">
   {% for uni in universities %}
-    <a href="{% url 'students-university-properties' uni.id %}" class="university-dropdown-item {% if uni.id == university.id %}active{% endif %}">
+    <a href="{% if service_slug %}{% url 'service-university-properties' service_slug=service_slug pk=uni.id %}{% else %}{% url 'students-university-properties' uni.id %}{% endif %}" class="university-dropdown-item {% if uni.id == university.id %}active{% endif %}">
       {{ uni.name }}
     </a>
   {% endfor %}

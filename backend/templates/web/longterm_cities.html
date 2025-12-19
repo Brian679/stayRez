@@ -192,7 +192,7 @@ h2 {
   {% if cities %}
   <div class="cities-grid">
     {% for city_data in cities %}
-    <a href="{% url 'longterm-properties' %}?city={{ city_data.city.id }}" class="city-card">
+    <a href="{% if service_slug %}{% url 'service-properties' service_slug=service_slug %}?city={{ city_data.city.id }}{% else %}{% url 'longterm-properties' %}?city={{ city_data.city.id }}{% endif %}" class="city-card">
       <div class="city-card-image">
         {% if city_data.sample_image %}
         <img src="{{ city_data.sample_image }}" alt="{{ city_data.city.name }}">

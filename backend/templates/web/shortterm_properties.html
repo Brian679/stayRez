@@ -250,12 +250,12 @@
 
     <div class="filter-bar">
         <button class="filter-btn {% if not selected_city %}active{% endif %}" 
-                onclick="window.location.href='{% url 'shortterm-properties' %}'">
+                onclick="window.location.href='{% if service_slug %}{% url 'service-properties' service_slug=service_slug %}{% else %}{% url 'shortterm-properties' %}{% endif %}'">
             All Destinations
         </button>
         {% for city in cities %}
         <button class="filter-btn {% if selected_city == city.name %}active{% endif %}"
-                onclick="window.location.href='{% url 'shortterm-properties' %}?city={{ city.name }}'">
+                onclick="window.location.href='{% if service_slug %}{% url 'service-properties' service_slug=service_slug %}{% else %}{% url 'shortterm-properties' %}{% endif %}?city={{ city.id }}'">
             {{ city.name }}
         </button>
         {% endfor %}

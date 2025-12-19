@@ -64,13 +64,72 @@ def home(request):
         
         services.append({
             'name': service.name,
-            'url': f'/{service.slug}/' if service.property_type else '/',
+            'url': reverse('service-entry', kwargs={'service_slug': service.slug}) if service.property_type else '/',
             'bg': service.background_color,
             'image': image_url,
             'description': service.description,
         })
     
     return render(request, "web/home.html", {"services": services})
+
+
+def _get_active_service_or_404(service_slug):
+    from properties.models import Service
+
+    return get_object_or_404(Service, slug=service_slug, is_active=True)
+
+
+def service_entry(request, service_slug):
+    """Entry point for any service, driven by Service.slug.
+
+    - Students accommodation routes to the universities list
+    - Others route to their city list page
+    """
+    service = _get_active_service_or_404(service_slug)
+    property_type = (service.property_type or '').strip()
+    if not property_type:
+        return redirect('/')
+
+    if property_type == 'students':
+        return universities(request, service_slug=service_slug)
+
+    if property_type == 'long_term':
+        return longterm_cities(request, service_slug=service_slug)
+    if property_type == 'short_term':
+        return shortterm_cities(request, service_slug=service_slug)
+    if property_type == 'real_estate':
+        return realestate_cities(request, service_slug=service_slug)
+    if property_type == 'resort':
+        return resort_cities(request, service_slug=service_slug)
+    if property_type == 'shop':
+        return shop_cities(request, service_slug=service_slug)
+
+    # Unknown property_type
+    return redirect('/')
+
+
+def service_properties(request, service_slug):
+    """Properties list for any service slug (non-students).
+
+    Students accommodation uses university-based lists instead.
+    """
+    service = _get_active_service_or_404(service_slug)
+    property_type = (service.property_type or '').strip()
+    if property_type == 'students':
+        return redirect('service-entry', service_slug=service_slug)
+
+    if property_type == 'long_term':
+        return longterm_properties(request, service_slug=service_slug)
+    if property_type == 'short_term':
+        return shortterm_properties(request, service_slug=service_slug)
+    if property_type == 'real_estate':
+        return realestate_properties(request, service_slug=service_slug)
+    if property_type == 'resort':
+        return resort_properties(request, service_slug=service_slug)
+    if property_type == 'shop':
+        return shop_properties(request, service_slug=service_slug)
+
+    return redirect('/')
 
 
 # --- Web Auth views (register, login, logout, profile)
@@ -255,21 +314,21 @@ def add_property(request):
     return render(request, "web/add_property.html", {"form": form})
 
 
-def universities(request):
+def universities(request, service_slug=None):
     # list universities with admin fees
     from properties.models import University
     unis = University.objects.all().order_by('city__name', 'name')
-    return render(request, "web/universities.html", {"unis": unis})
+    return render(request, "web/universities.html", {"unis": unis, "service_slug": service_slug})
 
 
-def university_properties(request, pk):
+def university_properties(request, pk, service_slug=None):
     from properties.models import Property, University
     q = request.GET.get("q")
     gender = request.GET.get("gender")
     sharing = request.GET.get("sharing")
     overnight = request.GET.get("overnight")
 
-    qs = Property.objects.filter(is_approved=True, university_id=pk)
+    qs = Property.objects.filter(is_approved=True, university_id=pk, property_type='students')
     if q:
         qs = qs.filter(title__icontains=q) | qs.filter(description__icontains=q)
     if gender and gender != "all":
@@ -356,6 +415,7 @@ def university_properties(request, pk):
         "page_obj": page_obj, 
         "university": uni,
         "uni": uni,  # Kept for backward compatibility
+        "service_slug": service_slug,
         "filters": {
             "gender": gender, 
             "sharing": sharing, 
@@ -561,7 +621,7 @@ def property_contact(request, pk):
     })
 
 
-def realestate_cities(request):
+def realestate_cities(request, service_slug=None):
     """List cities with real estate properties (resorts, lodges, shops)"""
     from django.db.models import Count, Q
 
@@ -606,10 +666,10 @@ def realestate_cities(request):
         }
         cities_data.append(city_info)
     
-    return render(request, "web/realestate_cities.html", {"cities": cities_data, "filter_type": filter_type or "all"})
+    return render(request, "web/realestate_cities.html", {"cities": cities_data, "filter_type": filter_type or "all", "service_slug": service_slug})
 
 
-def realestate_properties(request):
+def realestate_properties(request, service_slug=None):
     """List real estate properties with filters"""
     city_id = request.GET.get('city')
     property_subtype = request.GET.get('subtype')
@@ -633,11 +693,12 @@ def realestate_properties(request):
     return render(request, "web/realestate_properties.html", {
         "properties": qs,
         "city": city,
-        "property_subtype": property_subtype
+        "property_subtype": property_subtype,
+        "service_slug": service_slug,
     })
 
 
-def resort_cities(request):
+def resort_cities(request, service_slug=None):
     """List cities with resort properties"""
     from django.db.models import Count, Q
     
@@ -663,10 +724,10 @@ def resort_cities(request):
         }
         cities_data.append(city_info)
     
-    return render(request, "web/resort_cities.html", {"cities": cities_data})
+    return render(request, "web/resort_cities.html", {"cities": cities_data, "service_slug": service_slug})
 
 
-def resort_properties(request):
+def resort_properties(request, service_slug=None):
     """List resort properties with filters"""
     city_id = request.GET.get('city')
     
@@ -681,11 +742,12 @@ def resort_properties(request):
     
     return render(request, "web/resort_properties.html", {
         "properties": qs,
-        "city": city
+        "city": city,
+        "service_slug": service_slug,
     })
 
 
-def shop_cities(request):
+def shop_cities(request, service_slug=None):
     """List cities with shop properties"""
     cities = City.objects.all().order_by('name')
 
@@ -704,10 +766,10 @@ def shop_cities(request):
             'sample_image': sample_image,
         })
 
-    return render(request, "web/shop_cities.html", {"cities": cities_data})
+    return render(request, "web/shop_cities.html", {"cities": cities_data, "service_slug": service_slug})
 
 
-def shop_properties(request):
+def shop_properties(request, service_slug=None):
     """List shop properties with filters"""
     city_id = request.GET.get('city')
 
@@ -722,11 +784,12 @@ def shop_properties(request):
 
     return render(request, "web/shop_properties.html", {
         "properties": qs,
-        "city": city
+        "city": city,
+        "service_slug": service_slug,
     })
 
 
-def longterm_cities(request):
+def longterm_cities(request, service_slug=None):
     """List cities with long-term accommodation properties"""
     cities = City.objects.all().order_by('name')
     
@@ -752,10 +815,10 @@ def longterm_cities(request):
         }
         cities_data.append(city_info)
     
-    return render(request, "web/longterm_cities.html", {"cities": cities_data})
+    return render(request, "web/longterm_cities.html", {"cities": cities_data, "service_slug": service_slug})
 
 
-def longterm_properties(request):
+def longterm_properties(request, service_slug=None):
     """List long-term properties with filters"""
     city_id = request.GET.get('city')
     min_price = request.GET.get('min_price')
@@ -786,11 +849,12 @@ def longterm_properties(request):
         "properties": qs,
         "city": city,
         "min_price": min_price,
-        "max_price": max_price
+        "max_price": max_price,
+        "service_slug": service_slug,
     })
 
 
-def shortterm_cities(request):
+def shortterm_cities(request, service_slug=None):
     """List cities with short-term accommodation properties"""
     from django.db.models import Count, Q
     
@@ -823,10 +887,10 @@ def shortterm_cities(request):
         }
         cities_data.append(city_info)
     
-    return render(request, "web/shortterm_cities.html", {"cities": cities_data})
+    return render(request, "web/shortterm_cities.html", {"cities": cities_data, "service_slug": service_slug})
 
 
-def shortterm_properties(request):
+def shortterm_properties(request, service_slug=None):
     """List short-term properties with filters"""
     city_id = request.GET.get('city')
     min_price = request.GET.get('min_price')
@@ -865,7 +929,8 @@ def shortterm_properties(request):
         "city": city,
         "min_price": min_price,
         "max_price": max_price,
-        "guests": guests
+        "guests": guests,
+        "service_slug": service_slug,
     })
 
 
