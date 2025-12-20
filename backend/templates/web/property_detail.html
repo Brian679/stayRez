@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}{{ prop.title }} | offRez{% endblock %}
+{% block page_title %}{{ prop.title }} | offRez{% endblock %}
+{% block og_title %}{{ prop.title }} | offRez{% endblock %}
+{% block twitter_title %}{{ prop.title }} | offRez{% endblock %}
 {% block meta_description %}{% if prop.description %}{{ prop.description|truncatechars:155 }}{% else %}View details, photos, and pricing for {{ prop.title }} on offRez.{% endif %}{% endblock %}
+{% block og_description %}{% if prop.description %}{{ prop.description|truncatechars:155 }}{% else %}View details, photos, and pricing for {{ prop.title }} on offRez.{% endif %}{% endblock %}
+{% block twitter_description %}{% if prop.description %}{{ prop.description|truncatechars:155 }}{% else %}View details, photos, and pricing for {{ prop.title }} on offRez.{% endif %}{% endblock %}
 
 {% block og_image %}
   {% with img=prop.images.first %}

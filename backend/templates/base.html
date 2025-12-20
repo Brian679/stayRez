@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}offRez | Off Campus Accommodation{% endblock %}</title>
+    <title>{% block page_title %}offRez | Off Campus Accommodation{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
     <meta name="robots" content="{% block robots_content %}index,follow{% endblock %}">
 
@@ -13,16 +13,16 @@
     <!-- Open Graph (Facebook/WhatsApp) -->
     <meta property="og:site_name" content="offRez">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="{% block title %}offRez | Off Campus Accommodation{% endblock %}">
-    <meta property="og:description" content="{% block meta_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}offRez | Off Campus Accommodation{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/students.jpg' %}{% endblock %}">
 
     <!-- Twitter cards -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{% block title %}offRez | Off Campus Accommodation{% endblock %}">
-    <meta name="twitter:description" content="{% block meta_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
-    <meta name="twitter:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/students.jpg' %}{% endblock %}">
+    <meta name="twitter:title" content="{% block twitter_title %}offRez | Off Campus Accommodation{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/students.jpg' %}{% endblock %}">
 
     {% block structured_data %}
     <script type="application/ld+json">
