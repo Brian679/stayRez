@@ -8,8 +8,8 @@
     <meta name="description" content="{% block meta_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
     <meta name="robots" content="{% block robots_content %}index,follow{% endblock %}">
 
-    <link rel="icon" href="{% static 'images/offrez-logo.png' %}">
-    <link rel="apple-touch-icon" href="{% static 'images/offrez-logo.png' %}">
+    <link rel="icon" href="{% static 'images/offrez-logo.jpg' %}">
+    <link rel="apple-touch-icon" href="{% static 'images/offrez-logo.jpg' %}">
 
     <link rel="canonical" href="{% block canonical_url %}{{ request.build_absolute_uri }}{% endblock %}">
 
@@ -19,13 +19,13 @@
     <meta property="og:title" content="{% block og_title %}offRez | Off Campus Accommodation{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
-    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.png' %}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}{% endblock %}">
 
     <!-- Twitter cards -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{% block twitter_title %}offRez | Off Campus Accommodation{% endblock %}">
     <meta name="twitter:description" content="{% block twitter_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
-    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.png' %}{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}{% endblock %}">
 
     {% block structured_data %}
     <script type="application/ld+json">
@@ -39,7 +39,7 @@
           "name": "offRez",
           "logo": {
             "@type": "ImageObject",
-            "url": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.png' %}"
+            "url": "{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}"
           }
         }
       }

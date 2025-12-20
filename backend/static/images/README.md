@@ -10,6 +10,7 @@ This folder contains images for the home page service cards.
 4. **realestate.jpg** - Real estate (e.g., house for sale, real estate sign, property listings)
 5. **resorts.jpg** - Resorts (e.g., beach resort, vacation destination, luxury hotels)
 6. **shops.jpg** - Shops to rent (e.g., commercial storefront, retail spaces, shopping centers)
+7. **offrez-logo.jpg** - offRez logo (used for SEO/OpenGraph/Twitter previews and favicon)
 
 ## Image Specifications:
 
