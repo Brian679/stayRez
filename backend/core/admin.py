@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Notification, UserUniversityPreference
+from .models import Notification, UserUniversityPreference, ContactMessage
 
 
 @admin.register(Notification)
@@ -15,3 +15,10 @@ class UserUniversityPreferenceAdmin(admin.ModelAdmin):
     list_filter = ("university",)
     search_fields = ("ip_address", "user__email", "university__name")
     readonly_fields = ("created_at", "last_visited")
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ("username", "phone_number", "created_at")
+    search_fields = ("username", "phone_number", "message")
+    readonly_fields = ("created_at", "ip_address", "user")

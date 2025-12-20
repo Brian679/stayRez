@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block title %}Contact Landlord | offRez{% endblock %}
+{% block meta_description %}Unlock landlord contact details to inquire about accommodation availability and pricing.{% endblock %}
+{% block robots_content %}noindex,nofollow{% endblock %}
+
 {% block content %}
 <!-- Leaflet CSS and JS for maps -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -226,6 +230,26 @@
   gap: 12px;
   color: #0b5ed7;
 }
+
+.copy-btn {
+  margin-left: 10px;
+  padding: 6px 10px;
+  border: 1px solid #0d6efd;
+  background: #fff;
+  color: #0d6efd;
+  border-radius: 8px;
+  font-size: clamp(12px, 1.4vw, 14px);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: rgba(13, 110, 253, 0.06);
+}
+
+.copy-btn:active {
+  transform: translateY(1px);
+}
 </style>
 
 <div class="contact-container">
@@ -347,6 +371,10 @@
         <button type="button" id="notify-admin-btn" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
           Notify Admin to Check Payment
         </button>
+
+        <button type="button" id="cancel-confirmation-btn" class="btn btn-outline-danger" style="width: 100%; margin-top: 12px;">
+          Cancel Pending Confirmation
+        </button>
         
         <script>
         document.getElementById('notify-admin-btn').addEventListener('click', async function() {
@@ -376,6 +404,42 @@
             alert('Error: ' + error.message);
             btn.disabled = false;
             btn.textContent = 'Notify Admin to Check Payment';
+          }
+        });
+
+        document.getElementById('cancel-confirmation-btn').addEventListener('click', async function() {
+          const btn = this;
+          const ok = confirm('Cancel this pending payment confirmation? You can submit another confirmation after canceling.');
+          if (!ok) return;
+
+          btn.disabled = true;
+          const originalText = btn.textContent;
+          btn.textContent = 'Canceling...';
+
+          try {
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch('/api/payments/confirmations/{{ payment_confirmation.id }}/cancel/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+              }
+            });
+
+            if (response.ok) {
+              alert('Canceled. You can now submit a new confirmation.');
+              location.reload();
+              return;
+            }
+
+            const data = await response.json().catch(() => ({}));
+            alert(data.detail || 'Failed to cancel confirmation.');
+            btn.disabled = false;
+            btn.textContent = originalText;
+          } catch (error) {
+            alert('Error: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = originalText;
           }
         });
         </script>
@@ -419,7 +483,66 @@
               <strong>Payment Details:</strong>
               <div id="payment-amount" style="font-size: clamp(18px, 2.5vw, 24px); font-weight: 700; margin: 12px 0;"></div>
               <p style="margin: 8px 0 0 0;">
-                <strong>Ecocash Number:</strong> {{ ecocash_number }}<br>
+                <strong>Ecocash Number:</strong>
+                <span class="ecocash-number" data-ecocash-number>{{ ecocash_number }}</span>
+                <button type="button" class="copy-btn" data-copy-ecocash>Copy</button><br>
+                <strong>Account Holder:</strong> {{ ecocash_account_holder }}
+              </p>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Payment Confirmation Message</label>
+              <textarea id="confirmation-text" class="form-control" rows="4" placeholder="Paste your Ecocash payment confirmation message here..." required></textarea>
+            </div>
+
+            <button type="button" id="submit-confirmation-btn" class="btn btn-success" style="width: 100%;">
+              Submit Payment Confirmation
+            </button>
+          </div>
+        {% endif %}
+
+        {% elif payment_status == 'canceled' %}
+        <div class="info-box" style="background: #e2e3e5; border-left-color: #6c757d;">
+          <p style="margin: 0; font-size: clamp(14px, 1.8vw, 16px); color: #2b2f33; font-weight: 600;">
+            🚫 Payment Confirmation Status: Canceled
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: clamp(12px, 1.5vw, 14px); color: #2b2f33;">
+            You canceled your previous confirmation. You can submit a new confirmation below.
+          </p>
+        </div>
+
+        <!-- Show payment form again for canceled status -->
+        {% if request.user.is_authenticated %}
+          <div class="alert alert-info" style="margin-top: 20px;">
+            <strong>Payment Process:</strong>
+            <ol style="margin: 12px 0 0 20px; line-height: 1.8;">
+              <li>Enter the number of students</li>
+              <li>Calculate the total admin fee</li>
+              <li>Send payment to the provided Ecocash number</li>
+              <li>Submit payment confirmation</li>
+              <li>Wait for admin approval</li>
+            </ol>
+          </div>
+
+          <form id="payment-form">
+            <div class="form-group">
+              <label class="form-label">Number of Students</label>
+              <input type="number" id="students" class="form-control" min="1" placeholder="You want space for how many students" required>
+            </div>
+
+            <button type="button" id="calculate-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 20px;">
+              Calculate Admin Fee
+            </button>
+          </form>
+
+          <div id="payment-instructions" style="display: none;">
+            <div class="alert alert-warning">
+              <strong>Payment Details:</strong>
+              <div id="payment-amount" style="font-size: clamp(18px, 2.5vw, 24px); font-weight: 700; margin: 12px 0;"></div>
+              <p style="margin: 8px 0 0 0;">
+                <strong>Ecocash Number:</strong>
+                <span class="ecocash-number" data-ecocash-number>{{ ecocash_number }}</span>
+                <button type="button" class="copy-btn" data-copy-ecocash>Copy</button><br>
                 <strong>Account Holder:</strong> {{ ecocash_account_holder }}
               </p>
             </div>
@@ -474,7 +597,9 @@
               <strong>Payment Details:</strong>
               <div id="payment-amount" style="font-size: clamp(18px, 2.5vw, 24px); font-weight: 700; margin: 12px 0;"></div>
               <p style="margin: 8px 0 0 0;">
-                <strong>Ecocash Number:</strong> {{ ecocash_number }}<br>
+                <strong>Ecocash Number:</strong>
+                <span class="ecocash-number" data-ecocash-number>{{ ecocash_number }}</span>
+                <button type="button" class="copy-btn" data-copy-ecocash>Copy</button><br>
                 <strong>Account Holder:</strong> {{ ecocash_account_holder }}
               </p>
             </div>
@@ -523,6 +648,57 @@ function getCookie(name) {
   }
   return cookieValue;
 }
+
+function copyTextToClipboard(text) {
+  if (!text) return Promise.reject(new Error('Nothing to copy'));
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (!ok) return reject(new Error('Copy command failed'));
+      resolve();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-copy-ecocash]');
+  if (!btn) return;
+
+  const container = btn.closest('p') || document;
+  const numEl = container.querySelector('[data-ecocash-number]');
+  const number = (numEl ? numEl.textContent : '').trim();
+  const originalText = btn.textContent;
+  btn.disabled = true;
+
+  try {
+    await copyTextToClipboard(number);
+    btn.textContent = 'Copied';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 1200);
+  } catch (err) {
+    btn.textContent = 'Copy failed';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 1400);
+  }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
   const calculateBtn = document.getElementById('calculate-btn');

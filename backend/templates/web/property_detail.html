@@ -1,4 +1,29 @@
 {% extends "base.html" %}
+
+{% block title %}{{ prop.title }} | offRez{% endblock %}
+{% block meta_description %}{% if prop.description %}{{ prop.description|truncatechars:155 }}{% else %}View details, photos, and pricing for {{ prop.title }} on offRez.{% endif %}{% endblock %}
+
+{% block og_image %}
+  {% with img=prop.images.first %}
+    {% if img and img.image %}{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}{% else %}{{ block.super }}{% endif %}
+  {% endwith %}
+{% endblock %}
+
+{% block structured_data %}
+  {% with img=prop.images.first %}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LodgingBusiness",
+      "name": "{{ prop.title|escapejs }}",
+      "url": "{{ request.build_absolute_uri|escapejs }}",
+      "image": "{% if img and img.image %}{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}{% endif %}",
+      "description": "{% if prop.description %}{{ prop.description|truncatechars:300|escapejs }}{% endif %}"
+    }
+  </script>
+  {% endwith %}
+{% endblock %}
+
 {% block content %}
 <style>
 /* Light, responsive detail layout */

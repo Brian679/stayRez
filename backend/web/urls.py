@@ -4,6 +4,8 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path("", views.home, name="web-home"),
+    path("about/", views.about_view, name="web-about"),
+    path("contact/", views.contact_view, name="web-contact"),
     path("students/", views.universities, name="students-universities"),
     path("students/university/<int:pk>/", views.university_properties, name="students-university-properties"),
     path("longterm/", views.longterm_cities, name="longterm-cities"),
@@ -24,6 +26,7 @@ urlpatterns = [
     path("dashboard/my-properties/", views.my_properties, name="dashboard-my-properties"),
     path("dashboard/properties/add/", views.add_property, name="dashboard-add-property"),
     path("dashboard/properties/<int:pk>/edit/", views.edit_property, name="dashboard-edit-property"),
+    path("dashboard/properties/<int:pk>/toggle-availability/", views.toggle_property_availability, name="dashboard-toggle-availability"),
     path("dashboard/properties/<int:pk>/delete/", views.delete_property, name="dashboard-delete-property"),
     path("auth/register/", views.register_view, name="web-register"),
     path("auth/login/", views.login_view, name="web-login"),

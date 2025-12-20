@@ -4,7 +4,7 @@ from django.contrib.auth.forms import PasswordChangeForm, PasswordResetForm
 from payments.models import PaymentConfirmation
 from core.models import Notification
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
 from django.db import models
 from django.urls import reverse
@@ -71,6 +71,69 @@ def home(request):
         })
     
     return render(request, "web/home.html", {"services": services})
+
+
+def about_view(request):
+    return render(request, "web/about.html")
+
+
+def contact_view(request):
+    from django.conf import settings
+    from core.models import ContactMessage
+
+    if request.method == "POST":
+        username = (request.POST.get("username") or "").strip()
+        phone_number = (request.POST.get("phone_number") or "").strip()
+        message_text = (request.POST.get("message") or "").strip()
+
+        errors = []
+        if not username:
+            errors.append("Please enter your username.")
+        if not phone_number:
+            errors.append("Please enter your phone number.")
+        if not message_text:
+            errors.append("Please enter a message.")
+
+        if errors:
+            for e in errors:
+                messages.error(request, e)
+        else:
+            ip_address = request.META.get("HTTP_X_FORWARDED_FOR", request.META.get("REMOTE_ADDR", "")).split(",")[0].strip() or None
+            ContactMessage.objects.create(
+                username=username,
+                phone_number=phone_number,
+                message=message_text,
+                user=request.user if request.user.is_authenticated else None,
+                ip_address=ip_address,
+            )
+            messages.success(request, "Message sent. Thank you for contacting us.")
+            return redirect("web-contact")
+
+    return render(
+        request,
+        "web/contact.html",
+        {
+            "contact_address": getattr(settings, "CONTACT_ADDRESS", ""),
+            "contact_phone": getattr(settings, "CONTACT_PHONE", ""),
+            "whatsapp_number": getattr(settings, "WHATSAPP_NUMBER", ""),
+        },
+    )
+
+
+def robots_txt(request):
+    sitemap_url = request.build_absolute_uri(reverse("django-sitemap"))
+    content = "\n".join(
+        [
+            "User-agent: *",
+            "Allow: /",
+            "Disallow: /admin/",
+            "Disallow: /dashboard/",
+            "Disallow: /api/",
+            f"Sitemap: {sitemap_url}",
+            "",
+        ]
+    )
+    return HttpResponse(content, content_type="text/plain")
 
 
 def _get_active_service_or_404(service_slug):
@@ -289,6 +352,21 @@ def my_properties(request):
 
 
 @login_required
+def toggle_property_availability(request, pk):
+    prop = get_object_or_404(Property, pk=pk, owner=request.user)
+    if getattr(request.user, "role", None) != "landlord" and not request.user.is_staff:
+        return redirect('/admin/login/?next=' + request.path)
+
+    if request.method != "POST":
+        return redirect('dashboard-my-properties')
+
+    prop.is_available = not bool(prop.is_available)
+    prop.save(update_fields=["is_available"])
+    messages.success(request, f"Availability updated: {'Available' if prop.is_available else 'Not available'}")
+    return redirect(request.META.get("HTTP_REFERER", reverse("dashboard-my-properties")))
+
+
+@login_required
 def edit_property(request, pk):
     prop = get_object_or_404(Property, pk=pk, owner=request.user)
     if getattr(request.user, "role", None) != "landlord" and not request.user.is_staff:
@@ -298,8 +376,8 @@ def edit_property(request, pk):
         form = PropertyForm(request.POST, request.FILES, instance=prop)
         if form.is_valid():
             updated = form.save(commit=False)
-            # Any edit should go back to pending approval
-            updated.is_approved = False
+            # Once approved, landlord edits should not require re-approval.
+            updated.is_approved = prop.is_approved
             updated.save()
 
             # optional: append new uploaded images
@@ -311,7 +389,7 @@ def edit_property(request, pk):
             if delete_ids:
                 PropertyImage.objects.filter(property=updated, id__in=delete_ids).delete()
 
-            messages.success(request, 'Property updated (pending approval)')
+            messages.success(request, 'Property updated')
             return redirect('dashboard-my-properties')
     else:
         form = PropertyForm(instance=prop)
@@ -372,9 +450,62 @@ def university_properties(request, pk, service_slug=None):
     sharing = request.GET.get("sharing")
     overnight = request.GET.get("overnight")
 
-    qs = Property.objects.filter(is_approved=True, university_id=pk, property_type='students')
+    qs = Property.objects.filter(is_approved=True, is_available=True, university_id=pk, property_type='students')
+
+    # Determine which price field applies based on whether the user is browsing overnight listings.
+    price_field = "nightly_price" if overnight == "1" else "price_per_month"
+
+    # Enhanced search:
+    # - Matches text across title/description/location/city/amenities
+    # - If q is a number (e.g. "200"), treat as max price
+    # - If q contains "X km" (e.g. "2km"), treat as max distance_to_campus_km
     if q:
-        qs = qs.filter(title__icontains=q) | qs.filter(description__icontains=q)
+        import re
+        from django.db.models import Q
+
+        q_raw = str(q).strip()
+        q_work = q_raw
+
+        campus_km_val = None
+        km_match = re.search(r"(\d+(?:\.\d+)?)\s*km\b", q_work, flags=re.IGNORECASE)
+        if km_match:
+            try:
+                campus_km_val = float(km_match.group(1))
+            except ValueError:
+                campus_km_val = None
+            q_work = re.sub(r"(\d+(?:\.\d+)?)\s*km\b", " ", q_work, flags=re.IGNORECASE).strip()
+
+        price_val = None
+        if re.fullmatch(r"\s*[\$£€]?\s*[\d,]+(?:\.\d+)?\s*", q_work):
+            try:
+                price_val = float(re.sub(r"[^0-9.]", "", q_work))
+                q_work = ""
+            except ValueError:
+                price_val = None
+
+        if campus_km_val is not None:
+            qs = qs.filter(distance_to_campus_km__lte=campus_km_val)
+        if price_val is not None:
+            qs = qs.filter(**{f"{price_field}__lte": price_val})
+
+        q_text = q_work.strip()
+        if q_text:
+            # Support simple comma-separated multi-term search (each term must match somewhere).
+            terms = [t.strip() for t in q_text.split(",") if t.strip()]
+            if not terms:
+                terms = [q_text]
+
+            search_q = Q()
+            for term in terms:
+                term_q = (
+                    Q(title__icontains=term)
+                    | Q(description__icontains=term)
+                    | Q(location__icontains=term)
+                    | Q(amenities__icontains=term)
+                    | Q(city__name__icontains=term)
+                )
+                search_q &= term_q
+            qs = qs.filter(search_q)
     if gender and gender != "all":
         qs = qs.filter(gender=gender)
     if sharing and sharing != "any":
@@ -385,9 +516,9 @@ def university_properties(request, pk, service_slug=None):
     max_price = request.GET.get("max_price")
     try:
         if min_price:
-            qs = qs.filter(nightly_price__gte=float(min_price))
+            qs = qs.filter(**{f"{price_field}__gte": float(min_price)})
         if max_price:
-            qs = qs.filter(nightly_price__lte=float(max_price))
+            qs = qs.filter(**{f"{price_field}__lte": float(max_price)})
     except ValueError:
         pass
 
@@ -428,7 +559,7 @@ def university_properties(request, pk, service_slug=None):
             properties = qs
     else:
         if order in ("price_asc", "price_desc"):
-            qs = qs.order_by("nightly_price" if order == "price_asc" else "-nightly_price")
+            qs = qs.order_by(price_field if order == "price_asc" else f"-{price_field}")
         elif order == "newest":
             qs = qs.order_by("-created_at")
         properties = qs
@@ -682,9 +813,10 @@ def realestate_cities(request, service_slug=None):
     # Get cities that have real estate properties
     cities = City.objects.filter(
         property__is_approved=True,
+        property__is_available=True,
         property__property_type__in=types
     ).annotate(
-        property_count=Count('property', filter=Q(property__is_approved=True, property__property_type__in=types))
+        property_count=Count('property', filter=Q(property__is_approved=True, property__is_available=True, property__property_type__in=types))
     ).filter(property_count__gt=0).distinct()
     
     cities_data = []
@@ -692,6 +824,7 @@ def realestate_cities(request, service_slug=None):
         props = Property.objects.filter(
             city=city,
             is_approved=True,
+            is_available=True,
             property_type__in=types
         )
 
@@ -724,7 +857,7 @@ def realestate_properties(request, service_slug=None):
     if property_subtype == 'lodge':
         property_subtype = 'real_estate'
     
-    qs = Property.objects.filter(is_approved=True, property_type__in=['real_estate', 'resort', 'shop'])
+    qs = Property.objects.filter(is_approved=True, is_available=True, property_type__in=['real_estate', 'resort', 'shop'])
     
     city = None
     if city_id:
@@ -751,9 +884,10 @@ def resort_cities(request, service_slug=None):
     
     cities = City.objects.filter(
         property__is_approved=True,
+        property__is_available=True,
         property__property_type='resort'
     ).annotate(
-        property_count=Count('property', filter=Q(property__is_approved=True, property__property_type='resort'))
+        property_count=Count('property', filter=Q(property__is_approved=True, property__is_available=True, property__property_type='resort'))
     ).filter(property_count__gt=0).distinct()
     
     cities_data = []
@@ -761,6 +895,7 @@ def resort_cities(request, service_slug=None):
         props = Property.objects.filter(
             city=city,
             is_approved=True,
+            is_available=True,
             property_type='resort'
         )
         
@@ -778,7 +913,7 @@ def resort_properties(request, service_slug=None):
     """List resort properties with filters"""
     city_id = request.GET.get('city')
     
-    qs = Property.objects.filter(is_approved=True, property_type='resort')
+    qs = Property.objects.filter(is_approved=True, is_available=True, property_type='resort')
     
     city = None
     if city_id:
@@ -800,7 +935,7 @@ def shop_cities(request, service_slug=None):
 
     cities_data = []
     for city in cities:
-        props = Property.objects.filter(city=city, is_approved=True, property_type='shop')
+        props = Property.objects.filter(city=city, is_approved=True, is_available=True, property_type='shop')
 
         first_prop = props.first()
         sample_image = None
@@ -820,7 +955,7 @@ def shop_properties(request, service_slug=None):
     """List shop properties with filters"""
     city_id = request.GET.get('city')
 
-    qs = Property.objects.filter(is_approved=True, property_type='shop')
+    qs = Property.objects.filter(is_approved=True, is_available=True, property_type='shop')
 
     city = None
     if city_id:
@@ -845,6 +980,7 @@ def longterm_cities(request, service_slug=None):
         props = Property.objects.filter(
             city=city,
             is_approved=True,
+            is_available=True,
             property_type='long_term'
         )
 
@@ -871,7 +1007,7 @@ def longterm_properties(request, service_slug=None):
     min_price = request.GET.get('min_price')
     max_price = request.GET.get('max_price')
     
-    qs = Property.objects.filter(is_approved=True, property_type='long_term')
+    qs = Property.objects.filter(is_approved=True, is_available=True, property_type='long_term')
     
     city = None
     if city_id:
@@ -907,9 +1043,10 @@ def shortterm_cities(request, service_slug=None):
     
     cities = City.objects.filter(
         property__is_approved=True,
+        property__is_available=True,
         property__property_type='short_term'
     ).annotate(
-        property_count=Count('property', filter=Q(property__is_approved=True, property__property_type='short_term'))
+        property_count=Count('property', filter=Q(property__is_approved=True, property__is_available=True, property__property_type='short_term'))
     ).filter(property_count__gt=0).distinct()
     
     cities_data = []
@@ -917,6 +1054,7 @@ def shortterm_cities(request, service_slug=None):
         props = Property.objects.filter(
             city=city,
             is_approved=True,
+            is_available=True,
             property_type='short_term'
         )
 
@@ -944,7 +1082,7 @@ def shortterm_properties(request, service_slug=None):
     max_price = request.GET.get('max_price')
     guests = request.GET.get('guests')
     
-    qs = Property.objects.filter(is_approved=True, property_type='short_term')
+    qs = Property.objects.filter(is_approved=True, is_available=True, property_type='short_term')
     
     city = None
     if city_id:

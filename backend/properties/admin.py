@@ -32,8 +32,8 @@ class PropertyImageInline(admin.TabularInline):
 
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
-    list_display = ("title", "owner", "property_type", "city", "university", "max_occupancy", "is_approved")
-    list_filter = ("property_type", "is_approved", "city", "gender", "sharing")
+    list_display = ("title", "owner", "property_type", "city", "university", "max_occupancy", "is_approved", "is_available")
+    list_filter = ("property_type", "is_approved", "is_available", "city", "gender", "sharing")
     search_fields = ("title", "description")
     readonly_fields = ("created_at",)
     inlines = [PropertyImageInline]

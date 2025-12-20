@@ -65,6 +65,7 @@ class PropertyForm(forms.ModelForm):
             'property_type',
             'university',
             'city',
+            'is_available',
             'location',
             'latitude',
             'longitude',

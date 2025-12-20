@@ -96,7 +96,7 @@ class CityListView(APIView):
         else:
             price_field = "nightly_price"
 
-        prop_filter = Q(property__is_approved=True)
+        prop_filter = Q(property__is_approved=True, property__is_available=True)
         if types:
             prop_filter &= Q(property__property_type__in=types)
 
@@ -114,17 +114,17 @@ class CityListView(APIView):
             qs = qs.annotate(
                 resorts_count=Count(
                     "property",
-                    filter=Q(property__is_approved=True, property__property_type="resort"),
+                    filter=Q(property__is_approved=True, property__is_available=True, property__property_type="resort"),
                     distinct=True,
                 ),
                 lodges_count=Count(
                     "property",
-                    filter=Q(property__is_approved=True, property__property_type="real_estate"),
+                    filter=Q(property__is_approved=True, property__is_available=True, property__property_type="real_estate"),
                     distinct=True,
                 ),
                 shops_count=Count(
                     "property",
-                    filter=Q(property__is_approved=True, property__property_type="shop"),
+                    filter=Q(property__is_approved=True, property__is_available=True, property__property_type="shop"),
                     distinct=True,
                 ),
             )
@@ -138,7 +138,7 @@ class CityListView(APIView):
         for city in qs:
             sample_thumbnail = None
             try:
-                prop_qs = Property.objects.filter(is_approved=True, city=city)
+                prop_qs = Property.objects.filter(is_approved=True, is_available=True, city=city)
                 if types:
                     prop_qs = prop_qs.filter(property_type__in=types)
                 prop = prop_qs.prefetch_related("images").order_by("-created_at").first()
@@ -242,7 +242,7 @@ class UniversityPropertiesView(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         uni_id = self.kwargs.get("pk")
-        qs = Property.objects.filter(is_approved=True, university_id=uni_id)
+        qs = Property.objects.filter(is_approved=True, is_available=True, university_id=uni_id)
         qs = self.apply_filters(qs)
         # distance-based ordering if lat/lng provided
         lat = request.query_params.get("lat")
@@ -393,7 +393,7 @@ class PropertyListView(generics.ListAPIView):
         return qs
 
     def get(self, request, *args, **kwargs):
-        qs = Property.objects.filter(is_approved=True)
+        qs = Property.objects.filter(is_approved=True, is_available=True)
         qs = self.apply_filters(qs)
         lat = request.query_params.get("lat")
         lng = request.query_params.get("lng")
@@ -456,7 +456,7 @@ class PropertyListView(generics.ListAPIView):
         return Response({"results": serializer.data})
 
 class PropertyDetailView(generics.RetrieveAPIView):
-    queryset = Property.objects.filter(is_approved=True)
+    queryset = Property.objects.filter(is_approved=True, is_available=True)
     serializer_class = PropertyDetailSerializer
     permission_classes = [permissions.AllowAny]
 
@@ -503,10 +503,12 @@ class LandlordPropertyDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Property.objects.filter(owner=self.request.user)
 
     def perform_update(self, serializer):
+        was_approved = bool(getattr(serializer.instance, "is_approved", False))
         prop = serializer.save()
-        # Any landlord edit should go back to pending approval
-        prop.is_approved = False
-        prop.save(update_fields=['is_approved'])
+        # Once approved, landlord edits should not require re-approval.
+        if not was_approved and prop.is_approved:
+            prop.is_approved = False
+            prop.save(update_fields=['is_approved'])
 
 
 class LandlordActivityListView(generics.ListAPIView):
@@ -559,7 +561,7 @@ class NearbyPropertiesView(generics.ListAPIView):
         lat = request.query_params.get("lat")
         lng = request.query_params.get("lng")
         radius = float(request.query_params.get("radius_km", 5))
-        qs = Property.objects.filter(is_approved=True)
+        qs = Property.objects.filter(is_approved=True, is_available=True)
         if lat and lng:
             try:
                 lat = float(lat)
@@ -642,6 +644,32 @@ class NotifyAdminPaymentView(APIView):
             return Response({"detail": "Admin has been notified."})
         except AdminFeePayment.DoesNotExist:
             return Response({"detail": "Payment not found."}, status=404)
+
+
+class CancelPaymentConfirmationView(APIView):
+    """Allow a user to cancel their own pending payment confirmation.
+
+    Soft-cancel only: the record remains in DB and status becomes 'canceled'.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            confirmation = PaymentConfirmation.objects.select_related("payment").get(pk=pk)
+        except PaymentConfirmation.DoesNotExist:
+            return Response({"detail": "Payment confirmation not found."}, status=404)
+
+        if confirmation.payment.user_id != request.user.id:
+            # Don't leak existence across users
+            return Response({"detail": "Payment confirmation not found."}, status=404)
+
+        if confirmation.status != "pending":
+            return Response({"detail": "Only pending confirmations can be canceled."}, status=400)
+
+        confirmation.status = "canceled"
+        confirmation.save(update_fields=["status"])
+        return Response({"status": "canceled"}, status=200)
 
 
 # Admin actions for payment confirmations

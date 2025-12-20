@@ -70,6 +70,7 @@ class Property(models.Model):
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True)
     property_type = models.CharField(max_length=30, choices=PROPERTY_TYPE)
     is_approved = models.BooleanField(default=False)
+    is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Location (visible only after admin fee payment)

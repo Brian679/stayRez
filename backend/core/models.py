@@ -28,3 +28,22 @@ class UserUniversityPreference(models.Model):
     
     def __str__(self):
         return f"{self.ip_address} - {self.university.name} ({self.visit_count} visits)"
+
+
+class ContactMessage(models.Model):
+    """User-submitted messages from the Contact Us page."""
+
+    username = models.CharField(max_length=150)
+    phone_number = models.CharField(max_length=50)
+    message = models.TextField()
+
+    # optional metadata
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.username} ({self.phone_number})"

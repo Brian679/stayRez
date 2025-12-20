@@ -2,7 +2,7 @@
 {% block content %}
 <h3>My Properties</h3>
 <table class="table">
-    <thead><tr><th>Preview</th><th>Title</th><th>Type</th><th>Approved</th><th></th></tr></thead>
+    <thead><tr><th>Preview</th><th>Title</th><th>Type</th><th>Approved</th><th>Status</th><th></th></tr></thead>
     <tbody>
         {% for p in properties %}
         <tr>
@@ -16,13 +16,28 @@
             <td>{{ p.title }}</td>
             <td>{{ p.get_property_type_display }}</td>
             <td>{{ p.is_approved }}</td>
+                        <td>
+                                {% if p.is_available %}
+                                    <span class="badge text-bg-success">Available</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">Not available</span>
+                                {% endif %}
+                        </td>
             <td class="text-end">
+                                <form method="post" action="{% url 'dashboard-toggle-availability' p.id %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        {% if p.is_available %}
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit">Mark not available</button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-outline-success" type="submit">Mark available</button>
+                                        {% endif %}
+                                </form>
                 <a class="btn btn-sm btn-outline-dark" href="{% url 'dashboard-edit-property' p.id %}">Edit</a>
                 <a class="btn btn-sm btn-outline-danger" href="{% url 'dashboard-delete-property' p.id %}">Delete</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5">You have no properties yet.</td></tr>
+                <tr><td colspan="6">You have no properties yet.</td></tr>
         {% endfor %}
     </tbody>
 </table>

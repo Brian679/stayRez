@@ -32,6 +32,7 @@ urlpatterns = [
     path("landlord/activity/", views.LandlordActivityListView.as_view(), name="landlord-activity"),
     path("payments/confirm/", views.PaymentConfirmationCreateView.as_view(), name="payment-confirmation"),
     path("payments/notify-admin/<int:pk>/", views.NotifyAdminPaymentView.as_view(), name="notify-admin-payment"),
+    path("payments/confirmations/<int:pk>/cancel/", views.CancelPaymentConfirmationView.as_view(), name="cancel-payment-confirmation"),
 
     # admin actions
     path("admin/payment-confirmations/<int:pk>/approve/", views.ApprovePaymentConfirmationView.as_view(), name="approve-payment-confirmation"),

@@ -38,6 +38,7 @@ class PaymentConfirmation(models.Model):
         ("pending", "Pending"),
         ("approved", "Approved"),
         ("declined", "Declined"),
+        ("canceled", "Canceled"),
     )
     payment = models.ForeignKey(AdminFeePayment, on_delete=models.CASCADE, related_name="confirmations")
     confirmation_text = models.TextField()

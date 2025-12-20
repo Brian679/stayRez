@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
 
     # 3rd party
     "rest_framework",
@@ -129,3 +130,8 @@ LOGIN_URL = '/auth/login/'
 # Payment details (used on contact/payment pages)
 ECOCASH_NUMBER = os.getenv("ECOCASH_NUMBER", "0776487550")
 ECOCASH_ACCOUNT_HOLDER = os.getenv("ECOCASH_ACCOUNT_HOLDER", "T. Tayero")
+
+# Contact details (used on Contact Us page)
+CONTACT_ADDRESS = os.getenv("CONTACT_ADDRESS", "4376 Coldstream Chinhoyi")
+CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+263786196541")
+WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "+263785213532")
