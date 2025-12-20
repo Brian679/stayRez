@@ -120,6 +120,11 @@ except Exception:
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Trust proxy headers (PythonAnywhere / reverse proxies) so request.build_absolute_uri
+# and request.scheme reflect the external HTTPS URL.
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 _csrf_trusted = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").strip()
 if _csrf_trusted:
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(",") if o.strip()]
