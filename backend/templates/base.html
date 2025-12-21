@@ -20,7 +20,7 @@
     <meta property="og:description" content="{% block og_description %}Find off campus accommodation and rentals fast with offRez.{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}{% endblock %}">
-    <meta property="og:image:secure_url" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}{% endblock %}">
+    <meta property="og:image:secure_url" content="{% block og_image_secure_url %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/offrez-logo.jpg' %}{% endblock %}">
     <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:alt" content="offRez logo">
 

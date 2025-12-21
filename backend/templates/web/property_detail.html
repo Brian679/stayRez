@@ -13,6 +13,12 @@
   {% endwith %}
 {% endblock %}
 
+{% block og_image_secure_url %}
+  {% with img=prop.images.first %}
+    {% if img and img.image %}{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}{% else %}{{ block.super }}{% endif %}
+  {% endwith %}
+{% endblock %}
+
 {% block structured_data %}
   {% with img=prop.images.first %}
   <script type="application/ld+json">
