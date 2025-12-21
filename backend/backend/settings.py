@@ -138,5 +138,5 @@ ECOCASH_ACCOUNT_HOLDER = os.getenv("ECOCASH_ACCOUNT_HOLDER", "T. Tayero")
 
 # Contact details (used on Contact Us page)
 CONTACT_ADDRESS = os.getenv("CONTACT_ADDRESS", "4376 Coldstream Chinhoyi")
-CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+263786196541")
+CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+263776487550")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "+263785213532")
