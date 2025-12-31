@@ -160,26 +160,30 @@
     <nav class="navbar navbar-expand-lg">
       <div class="container">
         <a class="navbar-brand brand" href="/"> <str class="off">off</str><str class="rez">Rez</str></a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
+
+        <div class="d-flex align-items-center ms-auto order-1 order-lg-2">
+          <!-- Notifications (kept out of collapsed menu on small screens) -->
+          {% if request.user.is_authenticated %}
+          <div class="dropdown">
+            <a class="nav-link nav-icon" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" id="notificationIcon">
+              <i class="bi bi-bell"></i>
+              <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;" id="notificationDropdown">
+              <li><h6 class="dropdown-header">Notifications</h6></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><div id="notificationList" class="px-2"></div></li>
+            </ul>
+          </div>
+          {% endif %}
+
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+        </div>
+
         <div class="collapse navbar-collapse" id="nav">
           <ul class="navbar-nav ms-auto align-items-center">
-            <!-- Notifications -->
-            {% if request.user.is_authenticated %}
-            <li class="nav-item dropdown">
-              <a class="nav-link nav-icon" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" id="notificationIcon">
-                <i class="bi bi-bell"></i>
-                <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;" id="notificationDropdown">
-                <li><h6 class="dropdown-header">Notifications</h6></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><div id="notificationList" class="px-2"></div></li>
-              </ul>
-            </li>
-            {% endif %}
-
             {% if request.user.is_authenticated %}
               <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-profile' %}">Profile</a></li>
               <li class="nav-item"><a class="nav-link text-dark" href="{% url 'web-logout' %}">Logout</a></li>
