@@ -14,11 +14,14 @@ from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
 from kivy.core.window import Window
+from kivy.properties import BooleanProperty, StringProperty
 import traceback
 from datetime import datetime
 import os
 import hashlib
 import time
+import urllib.parse
+import webbrowser
 
 API_BASE = "http://127.0.0.1:8000/api/"
 API_AUTH_BASE = API_BASE + "auth/"
@@ -103,41 +106,10 @@ def cached_request(url, *, on_success, on_failure=None, method='GET', cache_fall
 KV_LOAD_ERROR = None
 
 
-# Explicitly load kv to ensure it's picked up when running from different working dirs
+# KV paths. Loaded from inside OffRezApp.load_kv() to ensure `app.*` bindings
+# in KV evaluate when the App instance exists.
 KV_PATH = os.path.join(os.path.dirname(__file__), 'offrez.kv')
 EXTRA_KV_PATH = os.path.join(os.path.dirname(__file__), 'screens_extra.kv')
-
-if os.path.exists(KV_PATH):
-    # Kivy auto-loads a KV file that matches the App class name; only load
-    # explicitly if it isn't already in the Builder's loaded files.
-    if KV_PATH not in getattr(Builder, 'files', []):
-        try:
-            Builder.load_file(KV_PATH)
-        except Exception as e:
-            print('Failed to load KV file:', e)
-            log_path = os.path.join(os.path.dirname(__file__), 'offrez_kv_error.log')
-            with open(log_path, 'a', encoding='utf-8') as fh:
-                fh.write(f"{datetime.utcnow().isoformat()} - KV load error:\n")
-                fh.write(traceback.format_exc())
-                fh.write('\n---\n')
-            print('Wrote KV load traceback to', log_path)
-            KV_LOAD_ERROR = log_path
-    else:
-        print('KV already loaded, skipping explicit load')
-else:
-    print('KV file not found at', KV_PATH)
-
-# Load extra screens KV
-if os.path.exists(EXTRA_KV_PATH):
-    if not getattr(Builder, '_extra_kv_loaded', False):
-        try:
-            Builder.load_file(EXTRA_KV_PATH)
-            Builder._extra_kv_loaded = True
-            print('Extra KV file loaded')
-        except Exception as e:
-            print('Failed to load extra KV file:', e)
-    else:
-        print('Extra KV already loaded')
 
 
 def start_pulse(widget, interval=0.6):
@@ -166,6 +138,25 @@ def fade_in_widget(widget, delay=0.0, duration=0.28):
     def _do(dt):
         Animation(opacity=1.0, d=duration).start(widget)
     Clock.schedule_once(_do, delay)
+
+
+def configure_cover_image(img):
+    """Best-effort 'cover' image behavior (fill the box)."""
+    if img is None:
+        return
+    # Newer Kivy
+    if hasattr(img, 'fit_mode'):
+        try:
+            img.fit_mode = 'cover'
+        except Exception:
+            pass
+        return
+
+    # Older Kivy fallback
+    if hasattr(img, 'allow_stretch'):
+        img.allow_stretch = True
+    if hasattr(img, 'keep_ratio'):
+        img.keep_ratio = False
 
 
 class HomeScreen(Screen):
@@ -254,6 +245,16 @@ class HomeScreen(Screen):
                 '🏠  Home',
                 lambda _: self.navigate_and_close('home', popup)
             ))
+
+            menu_layout.add_widget(create_menu_button(
+                'ℹ️  About us',
+                lambda _: (popup.dismiss(), App.get_running_app().open_about())
+            ))
+
+            menu_layout.add_widget(create_menu_button(
+                '✉️  Contact us',
+                lambda _: (popup.dismiss(), App.get_running_app().open_contact())
+            ))
             
             # Logout with different styling
             menu_layout.add_widget(create_menu_button(
@@ -285,6 +286,18 @@ class HomeScreen(Screen):
                 '📝  Register',
                 lambda _: self.navigate_and_close('register', popup),
                 bg_color=(0.2, 0.6, 1, 0.2)
+            ))
+
+            menu_layout.add_widget(create_menu_button(
+                'ℹ️  About us',
+                lambda _: (popup.dismiss(), App.get_running_app().open_about()),
+                bg_color=(0.95, 0.95, 0.95, 1)
+            ))
+
+            menu_layout.add_widget(create_menu_button(
+                '✉️  Contact us',
+                lambda _: (popup.dismiss(), App.get_running_app().open_contact()),
+                bg_color=(0.95, 0.95, 0.95, 1)
             ))
         
         # Close button
@@ -379,71 +392,134 @@ class HomeScreen(Screen):
     def create_service_tile(self, service):
         """Create a clickable service tile widget from service data"""
         from kivy.uix.behaviors import ButtonBehavior
-        
-        # Parse colors
-        bg_color = self.hex_to_rgba(service.get('background_color', '#eeeeee'))
-        text_color = self.hex_to_rgba(service.get('text_color', '#333333'))
+        from kivy.uix.anchorlayout import AnchorLayout
         
         # Create clickable tile container using ButtonBehavior
         class ClickableTile(ButtonBehavior, BoxLayout):
             pass
-        
-        # Responsive height based on screen width
-        tile_height = dp(200) if Window.width < dp(600) else dp(240)
-        
+
+        # Web-style service card (matches templates/web/home.html):
+        # - black background
+        # - image top half with light gray fallback background
+        # - gold title, whitesmoke description
+        # - responsive aspect ratio similar to CSS breakpoints
         tile = ClickableTile(
             orientation='vertical',
             padding=0,
             spacing=0,
             size_hint_y=None,
-            height=tile_height
         )
-        
-        # Add background with rounded corners and shadow
-        from kivy.graphics import Color, RoundedRectangle, Rectangle
+
+        from kivy.graphics import Color, RoundedRectangle
         with tile.canvas.before:
-            # Shadow
-            Color(0, 0, 0, 0.1)
-            tile.shadow = RoundedRectangle(pos=(tile.pos[0] + dp(2), tile.pos[1] - dp(2)), size=tile.size, radius=[dp(10)])
-            # Background
-            Color(*bg_color)
+            # Subtle shadow
+            Color(0, 0, 0, 0.12)
+            tile.shadow = RoundedRectangle(pos=(tile.x + dp(2), tile.y - dp(2)), size=tile.size, radius=[dp(10)])
+            # Card background
+            Color(0, 0, 0, 1)
             tile.bg_rect = RoundedRectangle(pos=tile.pos, size=tile.size, radius=[dp(10)])
-        
-        def update_shadow_and_bg(w, v):
-            tile.shadow.pos = (w.pos[0] + dp(2), w.pos[1] - dp(2))
+
+        def _update_tile_canvas(w, _):
+            tile.shadow.pos = (w.x + dp(2), w.y - dp(2))
             tile.shadow.size = w.size
             tile.bg_rect.pos = w.pos
             tile.bg_rect.size = w.size
-        
-        tile.bind(pos=update_shadow_and_bg)
-        tile.bind(size=update_shadow_and_bg)
-        
-        # Add image - fills 60% of tile, stretches to fill space
+
+        tile.bind(pos=_update_tile_canvas)
+        tile.bind(size=_update_tile_canvas)
+
+        def _apply_aspect_ratio(*_args):
+            # Similar to CSS:
+            # - small screens: 1 / 1.15 (taller)
+            # - large screens: 1 / 0.9 (slightly shorter)
+            ratio = 1.15 if Window.width < dp(600) else 0.9
+            if tile.width > 0:
+                tile.height = tile.width / ratio
+
+        tile.bind(width=lambda *_: _apply_aspect_ratio())
+        Clock.schedule_once(lambda *_: _apply_aspect_ratio(), 0)
+
+        # Image container (top 50%) with light gray background (like .service-card-img)
+        image_container = AnchorLayout(size_hint_y=0.5)
+        with image_container.canvas.before:
+            Color(0.94, 0.94, 0.94, 1)
+            image_container.bg = RoundedRectangle(pos=image_container.pos, size=image_container.size, radius=[0, 0, 0, 0])
+
+        def _update_img_bg(w, _):
+            image_container.bg.pos = w.pos
+            image_container.bg.size = w.size
+
+        image_container.bind(pos=_update_img_bg)
+        image_container.bind(size=_update_img_bg)
+
         image_url = service.get('image_url') or f'assets/{service.get("slug", "students")}.png'
-        img = AsyncImage(
-            source=image_url,
-            size_hint_y=0.6,
-            allow_stretch=True,
-            keep_ratio=False
+        img = AsyncImage(source=image_url)
+        configure_cover_image(img)
+        image_container.add_widget(img)
+        tile.add_widget(image_container)
+
+        # Body (bottom 50%)
+        body = BoxLayout(
+            orientation='vertical',
+            padding=[dp(14), dp(12)],
+            spacing=dp(6),
+            size_hint_y=0.5,
         )
-        tile.add_widget(img)
-        
-        # Add text label - responsive font size
-        tile_text = f"[b]{service['name']}[/b]\\n\\n{service.get('description', '')}"
-        font_size = sp(11) if Window.width < dp(600) else sp(13)
-        
-        text_label = Label(
-            text=tile_text,
-            markup=True,
-            color=text_color,
-            font_size=font_size,
-            halign='left',
+
+        is_small = Window.width < dp(576)
+        is_large = Window.width >= dp(992)
+        title = Label(
+            text=service.get('name', ''),
+            bold=True,
+            color=(1, 0.843, 0, 1),  # #ffd700
+            font_size=sp(14) if is_small else (sp(15) if not is_large else sp(15)),
+            halign='center' if is_small else 'left',
             valign='top',
-            padding=[dp(10), dp(6)],
-            size_hint_y=0.4
+            size_hint_y=None,
         )
-        text_label.bind(size=text_label.setter('text_size'))
-        tile.add_widget(text_label)
+        title.bind(size=title.setter('text_size'))
+        if hasattr(title, 'max_lines'):
+            title.max_lines = 2
+
+        desc = Label(
+            text=service.get('description', '') or '',
+            color=(0.96, 0.96, 0.96, 1),  # whitesmoke-ish
+            font_size=sp(11) if is_small else (sp(12) if not is_large else sp(11)),
+            halign='center' if is_small else 'left',
+            valign='top',
+        )
+        desc.bind(size=desc.setter('text_size'))
+
+        # Apply web-like padding/line clamps at breakpoints
+        def _apply_body_style(*_):
+            small = Window.width < dp(576)
+            large = Window.width >= dp(992)
+
+            # Web: body padding ~14px, large screens ~10px
+            body.padding = [dp(10), dp(10)] if large else [dp(14), dp(12)]
+
+            title.halign = 'center' if small else 'left'
+            desc.halign = 'center' if small else 'left'
+
+            # Web: large screens clamp description to 2 lines
+            if hasattr(desc, 'max_lines'):
+                desc.max_lines = 3 if not large else 2
+            if hasattr(title, 'max_lines'):
+                title.max_lines = 2
+
+            # Re-apply text_size for halign/valign
+            title.text_size = title.size
+            desc.text_size = desc.size
+
+        tile.bind(size=_apply_body_style)
+        Clock.schedule_once(lambda *_: _apply_body_style(), 0)
+
+        # Make title take natural height based on font size
+        title.height = max(dp(22), title.font_size * 1.6)
+
+        body.add_widget(title)
+        body.add_widget(desc)
+        tile.add_widget(body)
         
         # Navigate based on property_type when entire tile is clicked
         def on_tile_click(_):
@@ -524,159 +600,132 @@ class UniversitiesScreen(Screen):
             self.ids.unis_container.add_widget(card)
     
     def create_university_card(self, university, index):
-        """Create a modern university card with name and admin fee"""
+        """Create a university card matching the web universities.html layout."""
         from kivy.uix.behaviors import ButtonBehavior
         from kivy.uix.widget import Widget
-        from kivy.graphics import Color, RoundedRectangle, Line
-        
+        from kivy.graphics import Color, RoundedRectangle
+
         class UniversityCard(ButtonBehavior, BoxLayout):
             pass
-        
-        # Responsive card height
-        card_height = dp(140) if Window.width < dp(600) else dp(160)
-        
+
+        w = Window.width
+        # Card height similar to the web tile feel (compact but readable)
+        card_height = dp(150) if w <= dp(576) else (dp(160) if w <= dp(768) else dp(170))
+
         card = UniversityCard(
             orientation='vertical',
-            padding=dp(16),
-            spacing=dp(8),
+            padding=[dp(16), dp(14)],
+            spacing=dp(10),
             size_hint_y=None,
-            height=card_height
+            height=card_height,
         )
         card.opacity = 0
-        
-        # Add white background with border
+
+        # Grey card background + subtle shadow (web: #f7f7f7, radius 10)
         with card.canvas.before:
-            Color(1, 1, 1, 1)
-            card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
-            # Gold border
-            Color(1, 0.84, 0, 0.3)
-            card.border = Line(rounded_rectangle=(card.x, card.y, card.width, card.height, dp(12)), width=1.5)
-        
-        def update_graphics(instance, value):
-            card.bg_rect.pos = instance.pos
-            card.bg_rect.size = instance.size
-            card.border.rounded_rectangle = (instance.x, instance.y, instance.width, instance.height, dp(12))
-        
-        card.bind(pos=update_graphics, size=update_graphics)
-        
-        # Top section: University name and city
-        header_box = BoxLayout(orientation='vertical', size_hint_y=0.6, spacing=dp(4))
-        
-        # University name - responsive font
+            Color(0, 0, 0, 0.06)
+            card.shadow = RoundedRectangle(pos=(card.x, card.y - dp(2)), size=card.size, radius=[dp(10)])
+            Color(0.968, 0.968, 0.968, 1)  # ~#f7f7f7
+            card.bg = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(10)])
+
+        def _sync_bg(inst, _):
+            card.shadow.pos = (inst.x, inst.y - dp(2))
+            card.shadow.size = inst.size
+            card.bg.pos = inst.pos
+            card.bg.size = inst.size
+
+        card.bind(pos=_sync_bg, size=_sync_bg)
+
+        # University name (centered, bold, responsive)
         uni_name = university.get('name', 'University')
-        font_size = sp(16) if Window.width < dp(600) else sp(18)
-        
+        name_size = sp(16) if w <= dp(576) else (sp(18) if w <= dp(768) else (sp(20) if w <= dp(992) else sp(22)))
         name_label = Label(
             text=f"[b]{uni_name}[/b]",
             markup=True,
-            font_size=font_size,
-            color=[0.1, 0.1, 0.1, 1],
-            halign='left',
-            valign='top',
+            font_size=name_size,
+            color=(0.07, 0.07, 0.07, 1),
+            halign='center',
+            valign='middle',
             size_hint_y=None,
-            height=dp(50)
+            height=dp(56),
         )
         name_label.bind(size=name_label.setter('text_size'))
-        header_box.add_widget(name_label)
-        
-        # City info
-        city_val = university.get('city')
-        if isinstance(city_val, dict):
-            city_name = city_val.get('name', '')
-        else:
-            city_name = str(city_val) if city_val else ''
-        
+        card.add_widget(name_label)
+
+        # City (muted). Web shows just the city name (no prefix).
+        # Avoid rendering numeric `city` ids.
+        city_name = (university.get('city_name') or '').strip()
+        if not city_name:
+            city_val = university.get('city')
+            if isinstance(city_val, dict):
+                city_name = (city_val.get('name') or '').strip()
+            else:
+                city_name = ''
+
         if city_name:
+            city_size = sp(13) if w <= dp(576) else (sp(14) if w <= dp(768) else sp(16))
             city_label = Label(
-                text=f"📍 {city_name}",
-                font_size=sp(13),
-                color=[0.5, 0.5, 0.5, 1],
+                text=city_name,
+                font_size=city_size,
+                color=(0.45, 0.45, 0.45, 1),
                 halign='left',
                 valign='middle',
                 size_hint_y=None,
-                height=dp(20)
+                height=dp(22),
             )
             city_label.bind(size=city_label.setter('text_size'))
-            header_box.add_widget(city_label)
-        
-        card.add_widget(header_box)
-        
-        # Bottom section: Admin fee display
-        fee_box = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=0.4,
-            spacing=dp(10),
-            padding=[0, dp(8), 0, 0]
-        )
-        
-        # Get admin fee
+            card.add_widget(city_label)
+
+        # Admin Fee row: "Admin Fee:" + yellow badge like Bootstrap bg-warning
         try:
             fee = float(university.get('admin_fee_per_head') or 0)
-        except:
+        except Exception:
             fee = 0.0
-        
-        # Admin fee badge with background
-        fee_container = BoxLayout(
-            orientation='horizontal',
-            size_hint_x=None,
-            width=dp(180),
-            padding=dp(8),
-            spacing=dp(6)
-        )
-        
-        # Background for fee badge
-        with fee_container.canvas.before:
-            Color(1, 0.84, 0, 0.15)
-            fee_container.fee_bg = RoundedRectangle(
-                pos=fee_container.pos,
-                size=fee_container.size,
-                radius=[dp(8)]
-            )
-        
-        fee_container.bind(
-            pos=lambda w, v: setattr(w.fee_bg, 'pos', v),
-            size=lambda w, v: setattr(w.fee_bg, 'size', v)
-        )
-        
+
+        fee_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(10))
+
         fee_label = Label(
-            text=f"[b]Admin Fee: ${fee:.2f}[/b]",
+            text='[b]Admin Fee:[/b]',
             markup=True,
-            font_size=sp(14),
-            color=[0.8, 0.5, 0, 1],
-            halign='center',
-            valign='middle'
+            font_size=sp(13) if w <= dp(576) else sp(14),
+            color=(0.12, 0.12, 0.12, 1),
+            halign='left',
+            valign='middle',
+            size_hint_x=None,
+            width=dp(92),
         )
         fee_label.bind(size=fee_label.setter('text_size'))
-        fee_container.add_widget(fee_label)
-        
-        fee_box.add_widget(fee_container)
-        fee_box.add_widget(Widget())  # Spacer
-        
-        # Arrow indicator
-        arrow = Label(
-            text='→',
-            font_size=sp(24),
-            color=[1, 0.84, 0, 1],
-            size_hint_x=None,
-            width=dp(40),
+        fee_row.add_widget(fee_label)
+
+        badge = Label(
+            text=f"[b]${fee:.2f}[/b]",
+            markup=True,
+            font_size=sp(13) if w <= dp(576) else sp(14),
+            color=(0, 0, 0, 1),
             halign='center',
-            valign='middle'
+            valign='middle',
+            size_hint=(None, None),
+            size=(dp(92), dp(26)),
         )
-        fee_box.add_widget(arrow)
-        
-        card.add_widget(fee_box)
-        
-        # Click handler
+        badge.bind(size=badge.setter('text_size'))
+
+        with badge.canvas.before:
+            Color(1, 0.84, 0, 1)  # #ffd700
+            badge.bg = RoundedRectangle(pos=badge.pos, size=badge.size, radius=[dp(8)])
+
+        badge.bind(pos=lambda inst, v: setattr(inst.bg, 'pos', v))
+        badge.bind(size=lambda inst, v: setattr(inst.bg, 'size', v))
+        fee_row.add_widget(badge)
+        fee_row.add_widget(Widget())
+        card.add_widget(fee_row)
+
         def on_card_click(_):
             props_screen = self.manager.get_screen('properties')
             props_screen.load_for_uni(university['id'], university.get('name'))
             self.manager.current = 'properties'
-        
+
         card.bind(on_release=on_card_click)
-        
-        # Fade in animation
         fade_in_widget(card, delay=index * 0.05)
-        
         return card
 
     def on_error(self, req, error):
@@ -707,6 +756,293 @@ class PropertyListScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.liked_store = JsonStore('liked_properties.json')
+
+    def is_liked(self, prop_id):
+        return str(prop_id) in self.liked_store
+
+    def toggle_like(self, prop, btn):
+        prop_id = str((prop or {}).get('id'))
+        if not prop_id or prop_id == 'None':
+            return
+
+        if self.is_liked(prop_id):
+            self.liked_store.delete(prop_id)
+            btn.text = '♡'
+            btn.color = [0.25, 0.25, 0.25, 1]
+        else:
+            self.liked_store.put(prop_id, liked=True, prop=prop)
+            btn.text = '♥'
+            btn.color = [1, 0.2, 0.2, 1]
+
+    def _create_web_like_property_card(self, prop, index=0):
+        """Build a web-like accommodation card (header/meta, main image, title+price, description).
+
+        Matches the structure of backend/templates/web/university_properties.html.
+        """
+        from kivy.uix.behaviors import ButtonBehavior
+        from kivy.uix.widget import Widget
+        from kivy.graphics import Color, RoundedRectangle, Line
+
+        class Card(ButtonBehavior, BoxLayout):
+            pass
+
+        w = Window.width
+        is_small = w < dp(600)
+
+        # Slightly closer to web proportions (taller media)
+        card_height = dp(332) if is_small else dp(350)
+        media_h = dp(200) if is_small else dp(220)
+
+        card = Card(orientation='vertical', size_hint_y=None, height=card_height, padding=0, spacing=0)
+        card.opacity = 0
+
+        # Card background + border (like web card)
+        with card.canvas.before:
+            Color(0, 0, 0, 0.08)
+            card.shadow_rect = RoundedRectangle(pos=(card.x, card.y - dp(4)), size=card.size, radius=[dp(22)])
+            Color(1, 1, 1, 1)
+            card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(22)])
+        with card.canvas.after:
+            # web border: #efe6d9
+            Color(0.937, 0.902, 0.851, 1)
+            card.border_line = Line(rounded_rectangle=[card.x, card.y, card.width, card.height, dp(22)], width=1)
+
+        def _sync(_inst, _val):
+            card.shadow_rect.pos = (card.x, card.y - dp(4))
+            card.shadow_rect.size = card.size
+            card.bg_rect.pos = card.pos
+            card.bg_rect.size = card.size
+            card.border_line.rounded_rectangle = [card.x, card.y, card.width, card.height, dp(22)]
+
+        card.bind(pos=_sync, size=_sync)
+
+        # Header row (avatar + meta + like)
+        header = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(58), padding=[dp(14), dp(10)], spacing=dp(10))
+
+        avatar = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)))
+        with avatar.canvas.before:
+            # web avatar: rounded square with border
+            Color(1.0, 0.976, 0.949, 1)
+            avatar.bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(14)])
+            Color(0.878, 0.847, 0.780, 1)
+            avatar.bd = Line(rounded_rectangle=[avatar.x, avatar.y, avatar.width, avatar.height, dp(14)], width=1.2)
+        avatar.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+        avatar.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+        avatar.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
+        avatar.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
+
+        thumb = (prop or {}).get('thumbnail') or ''
+        if thumb:
+            avatar.add_widget(AsyncImage(source=thumb, fit_mode='contain'))
+        else:
+            avatar.add_widget(Label(text='🏠', font_size=sp(18), color=(0.55, 0.55, 0.55, 1), halign='center', valign='middle'))
+            avatar.children[0].bind(size=avatar.children[0].setter('text_size'))
+        header.add_widget(avatar)
+
+        meta = BoxLayout(orientation='vertical', spacing=dp(2))
+
+        # Location line (web: location/city/distance)
+        location_text = ''
+        if (prop or {}).get('location'):
+            location_text = str(prop.get('location'))
+        elif (prop or {}).get('city_name'):
+            location_text = str(prop.get('city_name'))
+        elif isinstance((prop or {}).get('city'), str):
+            location_text = str(prop.get('city'))
+        elif (prop or {}).get('distance_km'):
+            try:
+                location_text = f"{round(float(prop.get('distance_km')), 1)} km from campus"
+            except Exception:
+                location_text = "Around campus"
+        else:
+            location_text = "Around campus"
+
+        channel = Label(
+            text=location_text,
+            font_size=sp(12) if is_small else sp(13),
+            color=(0.25, 0.25, 0.25, 1),
+            halign='left',
+            valign='middle',
+        )
+        channel.bind(size=channel.setter('text_size'))
+        meta.add_widget(channel)
+
+        gender = (prop or {}).get('gender_display') or (prop or {}).get('gender') or ''
+        sharing = (prop or {}).get('sharing_display') or (prop or {}).get('sharing') or ''
+        meta_line = ""
+        if gender and sharing:
+            meta_line = f"{gender} · {sharing}"
+        elif gender:
+            meta_line = str(gender)
+        elif sharing:
+            meta_line = str(sharing)
+
+        followers = Label(
+            text=meta_line,
+            font_size=sp(11) if is_small else sp(12),
+            color=(0.45, 0.45, 0.45, 1),
+            halign='left',
+            valign='middle',
+        )
+        followers.bind(size=followers.setter('text_size'))
+        meta.add_widget(followers)
+        header.add_widget(meta)
+
+        like_btn = Button(
+            text='♥' if self.is_liked((prop or {}).get('id')) else '♡',
+            size_hint=(None, None),
+            size=(dp(42), dp(42)),
+            background_normal='',
+            background_color=[1, 1, 1, 1],
+            font_size=sp(20),
+            color=[1, 0.2, 0.2, 1] if self.is_liked((prop or {}).get('id')) else [0.25, 0.25, 0.25, 1],
+        )
+        with like_btn.canvas.before:
+            Color(1, 1, 1, 0.9)
+            like_btn.bg = RoundedRectangle(pos=like_btn.pos, size=like_btn.size, radius=[dp(21)])
+            Color(0.90, 0.90, 0.90, 1)
+            like_btn.bd = Line(rounded_rectangle=[like_btn.x, like_btn.y, like_btn.width, like_btn.height, dp(21)], width=1)
+        like_btn.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
+        like_btn.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
+        like_btn.bind(on_release=lambda btn, p=prop: self.toggle_like(p, btn))
+        header.add_widget(Widget())
+        header.add_widget(like_btn)
+
+        card.add_widget(header)
+
+        # Main media
+        media = BoxLayout(size_hint_y=None, height=media_h)
+        img_src = (prop or {}).get('thumbnail') or 'assets/placeholder.png'
+        media_img = AsyncImage(source=img_src)
+        configure_cover_image(media_img)
+        media.add_widget(media_img)
+        card.add_widget(media)
+
+        # Body
+        body = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(6))
+
+        title_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(28), spacing=dp(8))
+        title = Label(
+            text=str((prop or {}).get('title') or 'Property'),
+            font_size=sp(14) if is_small else sp(15),
+            bold=True,
+            color=(0.13, 0.13, 0.13, 1),
+            halign='left',
+            valign='middle',
+        )
+        # Web-like truncation
+        if hasattr(title, 'shorten'):
+            title.shorten = True
+            title.shorten_from = 'right'
+        title.bind(size=title.setter('text_size'))
+        title_row.add_widget(title)
+
+        # Price pill (🔥 ... /month)
+        ptype = (prop or {}).get('property_type')
+        is_monthly = ptype in ('long_term', 'shop')
+        is_overnight = bool((prop or {}).get('overnight'))
+
+        if is_monthly or (ptype == 'students' and not is_overnight):
+            amount = (prop or {}).get('price_per_month')
+            suffix = '/month'
+        else:
+            amount = (prop or {}).get('nightly_price')
+            suffix = '/night'
+
+        amount_text = str(amount) if amount not in (None, '') else 'N/A'
+        pill = Label(
+            text=f"🔥 ${amount_text} {suffix}",
+            font_size=sp(11) if is_small else sp(12),
+            color=(0.13, 0.13, 0.13, 1),
+            halign='center',
+            valign='middle',
+            size_hint=(None, None),
+            size=(dp(120), dp(26)),
+        )
+        pill.bind(size=pill.setter('text_size'))
+        with pill.canvas.before:
+            Color(1, 0.976, 0.953, 1)  # close to web "reaction-pill" bg
+            pill.bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(13)])
+            Color(1, 0.894, 0.776, 1)
+            pill.bd = Line(rounded_rectangle=[pill.x, pill.y, pill.width, pill.height, dp(13)], width=1)
+        pill.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
+        pill.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
+
+        title_row.add_widget(pill)
+        body.add_widget(title_row)
+
+        desc_text = str((prop or {}).get('description') or '')
+        if len(desc_text) > 110:
+            desc_text = desc_text[:107] + '...'
+        if desc_text:
+            desc = Label(
+                text=desc_text,
+                font_size=sp(12) if is_small else sp(13),
+                color=(0.35, 0.35, 0.35, 1),
+                halign='left',
+                valign='top',
+                size_hint_y=None,
+                height=dp(44),
+            )
+            desc.bind(size=desc.setter('text_size'))
+            body.add_widget(desc)
+
+        read_more = Label(
+            text='Read more',
+            font_size=sp(12),
+            bold=True,
+            color=(0.05, 0.43, 0.99, 1),
+            halign='left',
+            valign='middle',
+            size_hint_y=None,
+            height=dp(18),
+        )
+        read_more.bind(size=read_more.setter('text_size'))
+        body.add_widget(read_more)
+
+        # Reaction pills row (mobile-only vibe)
+        pills = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(8))
+        def _pill(text):
+            l = Label(
+                text=text,
+                font_size=sp(11),
+                color=(0.13, 0.13, 0.13, 1),
+                halign='center',
+                valign='middle',
+                size_hint=(None, None),
+                size=(dp(95), dp(26)),
+            )
+            l.bind(size=l.setter('text_size'))
+            with l.canvas.before:
+                Color(1, 0.976, 0.953, 1)
+                l.bg = RoundedRectangle(pos=l.pos, size=l.size, radius=[dp(13)])
+                Color(1, 0.894, 0.776, 1)
+                l.bd = Line(rounded_rectangle=[l.x, l.y, l.width, l.height, dp(13)], width=1)
+            l.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
+            l.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
+            return l
+
+        any_pill = False
+        if sharing:
+            pills.add_widget(_pill('👍 ' + str(sharing)))
+            any_pill = True
+        max_occ = (prop or {}).get('max_occupancy')
+        if max_occ not in (None, ''):
+            pills.add_widget(_pill(f"❤️ {max_occ} max"))
+            any_pill = True
+        if any_pill:
+            body.add_widget(pills)
+
+        card.add_widget(body)
+
+        def _open(_):
+            det = self.manager.get_screen('property_detail')
+            det.load_property((prop or {}).get('id'))
+            self.manager.current = 'property_detail'
+
+        card.bind(on_release=_open)
+        fade_in_widget(card, delay=index * 0.05)
+        return card
     
     def load_for_uni(self, uni_id, uni_name=None):
         """Load properties for a specific university (student accommodation)"""
@@ -813,252 +1149,8 @@ class PropertyListScreen(Screen):
             return
         
         for idx, p in enumerate(result):
-            # Create clickable card with Airbnb-style horizontal layout
-            from kivy.uix.behaviors import ButtonBehavior
-            
-            class ClickableCard(ButtonBehavior, BoxLayout):
-                pass
-            
-            # Get screen width for responsive sizing
-            screen_width = Window.width
-            is_small = screen_width < dp(600)
-            
-            # Always vertical layout like web
-            card_orientation = 'vertical'
-            card_height = dp(280) if is_small else dp(300)
-            
-            card = ClickableCard(orientation=card_orientation, size_hint_y=None, height=card_height, padding=0, spacing=0)
-            card.opacity = 0
-            
-            # Add white background with Airbnb-style shadow
-            from kivy.graphics import Color, RoundedRectangle
-            with card.canvas.before:
-                # Shadow
-                Color(0, 0, 0, 0.05)
-                card.shadow_rect = RoundedRectangle(pos=(card.x, card.y - dp(2)), size=card.size, radius=[dp(12),])
-                # White background
-                Color(1, 1, 1, 1)
-                card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12),])
-                # Border
-                Color(0.92, 0.92, 0.92, 1)
-            
-            from kivy.graphics import Line
-            with card.canvas.after:
-                card.border_line = Line(rounded_rectangle=[card.x, card.y, card.width, card.height, dp(12)], width=1)
-            
-            def update_card_graphics(instance, value):
-                card.shadow_rect.pos = (instance.x, instance.y - dp(2))
-                card.shadow_rect.size = instance.size
-                card.bg_rect.pos = instance.pos
-                card.bg_rect.size = instance.size
-                card.border_line.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, dp(12)]
-            
-            card.bind(pos=update_card_graphics, size=update_card_graphics)
-            
-            # Image - always top, 60% height
-            img = AsyncImage(
-                source=p.get('thumbnail') or '', 
-                size_hint_y=None,
-                height=card_height * 0.6
-            )
-            card.add_widget(img)
-            
-            # Content container - right side for horizontal
-            content = BoxLayout(
-                orientation='vertical', 
-                padding=[dp(16), dp(12)],
-                spacing=dp(6)
-            )
-            
-            # Header: Title on left, Price on right
-            header = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), spacing=dp(12))
-            
-            # Title section
-            title_section = BoxLayout(orientation='vertical', spacing=dp(4))
-            title_size = sp(16)
-            title = Label(
-                text=f"[b]{p.get('title', 'Untitled')}[/b]", 
-                markup=True, 
-                font_size=title_size, 
-                halign='left', 
-                valign='top', 
-                color=(0.13, 0.13, 0.13, 1),
-                size_hint_y=None,
-                height=dp(24)
-            )
-            title.bind(size=title.setter('text_size'))
-            title_section.add_widget(title)
-            
-            # Location/distance
-            if p.get('distance_km'):
-                loc_size = sp(11) if is_small else sp(12)
-                location = Label(
-                    text=f"[color=#717171]📍 {round(p.get('distance_km', 0), 1)} km from campus[/color]",
-                    markup=True,
-                    font_size=loc_size,
-                    halign='left',
-                    valign='top',
-                    size_hint_y=None,
-                    height=dp(18)
-                )
-                location.bind(size=location.setter('text_size'))
-                title_section.add_widget(location)
-            
-            header.add_widget(title_section)
-            
-            # Price section on right
-            price_section = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(90), spacing=dp(2))
-            # Show monthly price for student accommodations, nightly for overnight properties
-            is_overnight = p.get('overnight', False)
-            if is_overnight:
-                price_text = f"${p.get('nightly_price', 'N/A')}"
-                price_label_text = '[color=#717171]per night[/color]'
-            else:
-                price_text = f"${p.get('price_per_month', 'N/A')}"
-                price_label_text = '[color=#717171]per month[/color]'
-            
-            price_size = sp(18) if is_small else sp(20)
-            price = Label(
-                text=f"[b]{price_text}[/b]",
-                markup=True,
-                font_size=price_size,
-                halign='right',
-                valign='top',
-                color=(0.13, 0.13, 0.13, 1),
-                size_hint_y=None,
-                height=dp(26)
-            )
-            price.bind(size=price.setter('text_size'))
-            
-            price_label_size = sp(10) if is_small else sp(11)
-            price_label = Label(
-                text=price_label_text,
-                markup=True,
-                font_size=price_label_size,
-                halign='right',
-                valign='top',
-                size_hint_y=None,
-                height=dp(16)
-            )
-            price_label.bind(size=price_label.setter('text_size'))
-            
-            price_section.add_widget(price)
-            price_section.add_widget(price_label)
-            header.add_widget(price_section)
-            
-            content.add_widget(header)
-            
-            # Description
-            desc_text = p.get('description', '')
-            if len(desc_text) > 100:
-                desc_text = desc_text[:97] + '...'
-            desc_size = sp(12) if is_small else sp(13)
-            desc = Label(
-                text=desc_text, 
-                size_hint_y=None, 
-                height=dp(44), 
-                font_size=desc_size,
-                halign='left', 
-                valign='top', 
-                color=(0.28, 0.28, 0.28, 1)
-            )
-            desc.bind(size=desc.setter('text_size'))
-            content.add_widget(desc)
-            
-            # Footer: Amenities on left
-            footer = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(32), spacing=dp(6))
-            
-            # Amenities badges
-            gender = p.get('gender_display', p.get('gender', ''))
-            sharing = p.get('sharing_display', p.get('sharing', ''))
-            
-            badge_size = sp(10) if is_small else sp(11)
-            
-            if gender:
-                gender_badge = Label(
-                    text=f'[color=#222222]{gender}[/color]',
-                    markup=True,
-                    font_size=badge_size,
-                    size_hint=(None, None),
-                    size=(dp(70), dp(26)),
-                    halign='center',
-                    valign='middle'
-                )
-                gender_badge.bind(size=gender_badge.setter('text_size'))
-                
-                with gender_badge.canvas.before:
-                    Color(0.97, 0.97, 0.97, 1)
-                    gender_badge.bg = RoundedRectangle(pos=gender_badge.pos, size=gender_badge.size, radius=[dp(6),])
-                    Color(0.91, 0.91, 0.91, 1)
-                    gender_badge.border = Line(rounded_rectangle=[gender_badge.x, gender_badge.y, gender_badge.width, gender_badge.height, dp(6)], width=1)
-                
-                def update_badge(instance, value, bg, border):
-                    bg.pos = instance.pos
-                    bg.size = instance.size
-                    border.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, dp(6)]
-                
-                gender_badge.bind(pos=lambda i, v: update_badge(i, v, gender_badge.bg, gender_badge.border))
-                gender_badge.bind(size=lambda i, v: update_badge(i, v, gender_badge.bg, gender_badge.border))
-                footer.add_widget(gender_badge)
-            
-            if sharing:
-                sharing_badge = Label(
-                    text=f'[color=#222222]{sharing}[/color]',
-                    markup=True,
-                    font_size=badge_size,
-                    size_hint=(None, None),
-                    size=(dp(80), dp(26)),
-                    halign='center',
-                    valign='middle'
-                )
-                sharing_badge.bind(size=sharing_badge.setter('text_size'))
-                
-                with sharing_badge.canvas.before:
-                    Color(0.97, 0.97, 0.97, 1)
-                    sharing_badge.bg = RoundedRectangle(pos=sharing_badge.pos, size=sharing_badge.size, radius=[dp(6),])
-                    Color(0.91, 0.91, 0.91, 1)
-                    sharing_badge.border = Line(rounded_rectangle=[sharing_badge.x, sharing_badge.y, sharing_badge.width, sharing_badge.height, dp(6)], width=1)
-                
-                sharing_badge.bind(pos=lambda i, v: update_badge(i, v, sharing_badge.bg, sharing_badge.border))
-                sharing_badge.bind(size=lambda i, v: update_badge(i, v, sharing_badge.bg, sharing_badge.border))
-                footer.add_widget(sharing_badge)
-            
-            if p.get('overnight'):
-                overnight_badge = Label(
-                    text='[color=#2e7d32]⭐ Overnight[/color]',
-                    markup=True,
-                    font_size=badge_size,
-                    size_hint=(None, None),
-                    size=(dp(90), dp(26)),
-                    halign='center',
-                    valign='middle'
-                )
-                overnight_badge.bind(size=overnight_badge.setter('text_size'))
-                
-                with overnight_badge.canvas.before:
-                    Color(0.91, 0.96, 0.91, 1)
-                    overnight_badge.bg = RoundedRectangle(pos=overnight_badge.pos, size=overnight_badge.size, radius=[dp(6),])
-                    Color(0.30, 0.69, 0.31, 1)
-                    overnight_badge.border = Line(rounded_rectangle=[overnight_badge.x, overnight_badge.y, overnight_badge.width, overnight_badge.height, dp(6)], width=1)
-                
-                overnight_badge.bind(pos=lambda i, v: update_badge(i, v, overnight_badge.bg, overnight_badge.border))
-                overnight_badge.bind(size=lambda i, v: update_badge(i, v, overnight_badge.bg, overnight_badge.border))
-                footer.add_widget(overnight_badge)
-            
-            footer.add_widget(BoxLayout())  # Spacer
-            content.add_widget(footer)
-            
-            card.add_widget(content)
-            
-            # Make card clickable
-            def _open_detail(_instance, pid=p['id']):
-                det = self.manager.get_screen('property_detail')
-                det.load_property(pid)
-                self.manager.current = 'property_detail'
-
-            card.bind(on_release=_open_detail)
+            card = self._create_web_like_property_card(p, index=idx)
             self.ids.props_container.add_widget(card)
-            fade_in_widget(card, delay=idx * 0.05)
     
     def on_loaded_longterm(self, req, result):
         """Handle loading long-term properties with city filtering"""
@@ -1084,198 +1176,7 @@ class PropertyListScreen(Screen):
             return
         
         for idx, p in enumerate(result):
-            # Create clickable card with Airbnb-style horizontal layout
-            from kivy.uix.behaviors import ButtonBehavior
-            
-            class ClickableCard(ButtonBehavior, BoxLayout):
-                pass
-            
-            # Get screen width for responsive sizing
-            screen_width = Window.width
-            is_small = screen_width < dp(600)
-            
-            # Always vertical layout like web
-            card_orientation = 'vertical'
-            card_height = dp(280) if is_small else dp(300)
-            
-            card = ClickableCard(orientation=card_orientation, size_hint_y=None, height=card_height, padding=0, spacing=0)
-            card.opacity = 0
-            
-            # Add white background with Airbnb-style shadow
-            from kivy.graphics import Color, RoundedRectangle
-            with card.canvas.before:
-                # Shadow
-                Color(0, 0, 0, 0.05)
-                card.shadow_rect = RoundedRectangle(pos=(card.x, card.y - dp(2)), size=card.size, radius=[dp(12),])
-                # White background
-                Color(1, 1, 1, 1)
-                card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12),])
-                # Border
-                Color(0.92, 0.92, 0.92, 1)
-            
-            from kivy.graphics import Line
-            with card.canvas.after:
-                card.border_line = Line(rounded_rectangle=[card.x, card.y, card.width, card.height, dp(12)], width=1)
-            
-            def update_card_graphics(instance, value):
-                card.shadow_rect.pos = (instance.x, instance.y - dp(2))
-                card.shadow_rect.size = instance.size
-                card.bg_rect.pos = instance.pos
-                card.bg_rect.size = instance.size
-                card.border_line.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, dp(12)]
-            
-            card.bind(pos=update_card_graphics, size=update_card_graphics)
-            
-            # Image - always top, 65% height
-            img = AsyncImage(
-                source=p.get('thumbnail') or '', 
-                size_hint_y=None,
-                height=card_height * 0.65
-            )
-            card.add_widget(img)
-            
-            # Content container
-            content = BoxLayout(
-                orientation='vertical', 
-                padding=[dp(16), dp(12)],
-                spacing=dp(6)
-            )
-            
-            # Header: Title on left, Price on right
-            header = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(50), spacing=dp(12))
-            
-            # Title section
-            title_section = BoxLayout(orientation='vertical', spacing=dp(4))
-            title_size = sp(16)
-            title = Label(
-                text=f"[b]{p.get('title', 'Untitled')}[/b]", 
-                markup=True, 
-                font_size=title_size, 
-                halign='left', 
-                valign='top', 
-                color=(0.13, 0.13, 0.13, 1),
-                size_hint_y=None,
-                height=dp(24)
-            )
-            title.bind(size=title.setter('text_size'))
-            title_section.add_widget(title)
-            
-            # Location (city)
-            city = p.get('city', '')
-            if city:
-                loc_size = sp(11) if is_small else sp(12)
-                location = Label(
-                    text=f"[color=#717171]📍 {city}[/color]",
-                    markup=True,
-                    font_size=loc_size,
-                    halign='left',
-                    valign='top',
-                    size_hint_y=None,
-                    height=dp(18)
-                )
-                location.bind(size=location.setter('text_size'))
-                title_section.add_widget(location)
-            
-            header.add_widget(title_section)
-            
-            # Price section on right
-            price_section = BoxLayout(orientation='vertical', size_hint_x=None, width=dp(90), spacing=dp(2))
-            price_text = f"${p.get('price_per_month', 'N/A')}"
-            price_label_text = '[color=#717171]per month[/color]'
-            
-            price_size = sp(18) if is_small else sp(20)
-            price = Label(
-                text=f"[b]{price_text}[/b]",
-                markup=True,
-                font_size=price_size,
-                halign='right',
-                valign='top',
-                color=(0.13, 0.13, 0.13, 1),
-                size_hint_y=None,
-                height=dp(26)
-            )
-            price.bind(size=price.setter('text_size'))
-            
-            price_label_size = sp(10) if is_small else sp(11)
-            price_label = Label(
-                text=price_label_text,
-                markup=True,
-                font_size=price_label_size,
-                halign='right',
-                valign='top',
-                size_hint_y=None,
-                height=dp(16)
-            )
-            price_label.bind(size=price_label.setter('text_size'))
-            
-            price_section.add_widget(price)
-            price_section.add_widget(price_label)
-            header.add_widget(price_section)
-            
-            content.add_widget(header)
-            
-            # Description
-            desc_text = p.get('description', '')
-            if len(desc_text) > 100:
-                desc_text = desc_text[:97] + '...'
-            desc_size = sp(12) if is_small else sp(13)
-            desc = Label(
-                text=desc_text, 
-                size_hint_y=None, 
-                height=dp(44), 
-                font_size=desc_size,
-                halign='left', 
-                valign='top', 
-                color=(0.28, 0.28, 0.28, 1)
-            )
-            desc.bind(size=desc.setter('text_size'))
-            content.add_widget(desc)
-            
-            # Footer: Amenities/property info badges
-            footer = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(32), spacing=dp(6))
-            
-            badge_size = sp(10) if is_small else sp(11)
-            
-            # Property type badge (if available)
-            if p.get('property_subtype'):
-                type_badge = Label(
-                    text=f'[color=#222222]{p.get("property_subtype")}[/color]',
-                    markup=True,
-                    font_size=badge_size,
-                    size_hint=(None, None),
-                    size=(dp(80), dp(26)),
-                    halign='center',
-                    valign='middle'
-                )
-                type_badge.bind(size=type_badge.setter('text_size'))
-                
-                with type_badge.canvas.before:
-                    Color(0.97, 0.97, 0.97, 1)
-                    type_badge.bg = RoundedRectangle(pos=type_badge.pos, size=type_badge.size, radius=[dp(6),])
-                    Color(0.91, 0.91, 0.91, 1)
-                    type_badge.border = Line(rounded_rectangle=[type_badge.x, type_badge.y, type_badge.width, type_badge.height, dp(6)], width=1)
-                
-                def update_badge(instance, value, bg, border):
-                    bg.pos = instance.pos
-                    bg.size = instance.size
-                    border.rounded_rectangle = [instance.x, instance.y, instance.width, instance.height, dp(6)]
-                
-                type_badge.bind(pos=lambda i, v: update_badge(i, v, type_badge.bg, type_badge.border))
-                type_badge.bind(size=lambda i, v: update_badge(i, v, type_badge.bg, type_badge.border))
-                footer.add_widget(type_badge)
-            
-            footer.add_widget(BoxLayout())  # Spacer
-            content.add_widget(footer)
-            
-            card.add_widget(content)
-            
-            # Make card clickable
-            def _open_detail(_instance, pid=p['id']):
-                det = self.manager.get_screen('property_detail')
-                det.load_property(pid)
-                self.manager.current = 'property_detail'
-
-            card.bind(on_release=_open_detail)
+            card = self._create_web_like_property_card(p, index=idx)
             self.ids.props_container.add_widget(card)
             fade_in_widget(card, delay=idx * 0.05)
 
@@ -1302,10 +1203,14 @@ class PropertyDetailScreen(Screen):
     _map_lat = None
     _map_lng = None
     _map_query = None
+    _reviews_expanded = False
+    _review_rating = 5
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.viewed_store = JsonStore('viewed_properties.json')
+        self._reviews_expanded = False
+        self._review_rating = 5
 
     def show_options_menu(self):
         """Show the global options menu (same as Home)."""
@@ -1317,6 +1222,7 @@ class PropertyDetailScreen(Screen):
     
     def load_property(self, prop_id):
         self.current_property = None
+        self._reviews_expanded = False
         if hasattr(self.ids, 'prop_loading'):
             self.ids.prop_loading.text = 'Loading...'
         url = f"{API_BASE}properties/{prop_id}/"
@@ -1331,25 +1237,28 @@ class PropertyDetailScreen(Screen):
         if hasattr(self.ids, 'prop_desc'):
             self.ids.prop_desc.text = result.get('description', '')
 
+        # Web-like header fields
+        self._populate_header_fields(result)
+
         self._populate_meta(result)
         self._populate_price_badges(result)
         self._populate_map_info(result)
         
         # Load images
         imgs = result.get('images') or []
-        if imgs and hasattr(self.ids, 'prop_image'):
-            self.ids.prop_image.source = imgs[0].get('image') or imgs[0].get('url', '')
-        elif hasattr(self.ids, 'prop_image'):
-            self.ids.prop_image.source = ''
-
         self._populate_gallery(imgs)
         self._populate_amenities(result)
         
         # Load reviews
         self.load_reviews()
 
+        # Reset review form state
+        self._sync_review_form_state()
+
         # Track viewed activity
-        self.viewed_store.put(str(prop_id), viewed=datetime.now().isoformat(), prop=result)
+        prop_id = result.get('id')
+        if prop_id is not None:
+            self.viewed_store.put(str(prop_id), viewed=datetime.now().isoformat(), prop=result)
 
     def on_error(self, req, error):
         if hasattr(self.ids, 'prop_loading'):
@@ -1372,21 +1281,55 @@ class PropertyDetailScreen(Screen):
         lbl.bind(size=lbl.setter('text_size'))
         container.add_widget(lbl)
 
+    def _populate_header_fields(self, result):
+        """Populate web-like subtitle (location/university + distance) and the prominent price line."""
+        location = result.get('location') or result.get('address')
+        university = result.get('university_name') or result.get('university')
+        distance = result.get('distance_km') or result.get('distance_to_campus_km')
+
+        parts = []
+        if location:
+            parts.append(str(location))
+        elif university:
+            parts.append(str(university))
+        else:
+            parts.append('Accommodation')
+
+        if distance:
+            try:
+                parts.append(f"{round(float(distance), 1)} km to campus")
+            except Exception:
+                parts.append(f"{distance} km to campus")
+
+        if hasattr(self.ids, 'prop_subtitle'):
+            self.ids.prop_subtitle.text = " · ".join([p for p in parts if p])
+
+        ptype = result.get('property_type')
+        monthly = result.get('price_per_month')
+        nightly = result.get('nightly_price')
+        overnight = result.get('overnight')
+
+        price_text = ''
+        if monthly not in (None, ''):
+            price_text = f"[b]${monthly}[/b] [color=#6c757d]/ month[/color]"
+        elif overnight and nightly not in (None, ''):
+            price_text = f"[b]${nightly}[/b] [color=#6c757d]/ night[/color]"
+        else:
+            price_text = "[color=#6c757d]Price not available[/color]"
+
+        if hasattr(self.ids, 'prop_price_line'):
+            self.ids.prop_price_line.text = price_text
+
     def _populate_meta(self, result):
         ptype = result.get('property_type')
         is_monthly = ptype in ('long_term', 'shop')
         monthly = result.get('price_per_month')
         nightly = result.get('nightly_price')
 
-        distance = result.get('distance_km') or result.get('distance_to_campus_km')
-        university = result.get('university_name') or result.get('university')
-        city = result.get('city_name') or result.get('city')
-        location = result.get('location') or result.get('address')
-
         bedrooms = result.get('bedrooms')
         max_occ = result.get('max_occupancy')
-        gender = result.get('gender')
-        sharing = result.get('sharing')
+        gender = result.get('gender_display') or result.get('gender')
+        sharing = result.get('sharing_display') or result.get('sharing')
         overnight = result.get('overnight')
 
         # New UI: meta list
@@ -1394,27 +1337,25 @@ class PropertyDetailScreen(Screen):
             container = self.ids.prop_meta_items
             container.clear_widgets()
 
-            if location:
-                self._add_meta_row(container, f"📍 {location}")
-            if city:
-                self._add_meta_row(container, f"🏙️ {city}")
-            if university:
-                self._add_meta_row(container, f"🎓 {university}")
-            if distance:
-                try:
-                    self._add_meta_row(container, f"📏 {round(float(distance), 1)} km from university")
-                except Exception:
-                    self._add_meta_row(container, f"📏 {distance} km from university")
+            # Web detail shows a compact "Amenities" summary line.
+            summary_parts = []
+            if gender:
+                summary_parts.append(str(gender))
+            if sharing not in (None, ''):
+                summary_parts.append(str(sharing))
+            if overnight:
+                summary_parts.append('Overnight available')
+            if bedrooms not in (None, ''):
+                summary_parts.append(f"{bedrooms} Bedroom" + ("s" if str(bedrooms) != '1' else ""))
+            if summary_parts:
+                self._add_meta_row(container, "✨ " + " · ".join(summary_parts))
+
             if max_occ:
                 self._add_meta_row(container, f"👥 Max occupancy: {max_occ}")
-            if bedrooms:
+
+            # Keep a couple of extra details if provided
+            if bedrooms not in (None, ''):
                 self._add_meta_row(container, f"🛏️ Bedrooms: {bedrooms}")
-            if gender:
-                self._add_meta_row(container, f"🚻 Gender: {gender}")
-            if sharing is not None:
-                self._add_meta_row(container, f"🧑‍🤝‍🧑 Sharing: {'Yes' if sharing else 'No'}")
-            if overnight is not None:
-                self._add_meta_row(container, f"🌙 Overnight: {'Yes' if overnight else 'No'}")
 
         # Old UI compatibility: single meta label
         if hasattr(self.ids, 'prop_meta'):
@@ -1432,6 +1373,10 @@ class PropertyDetailScreen(Screen):
             self.ids.prop_meta.text = meta_text
 
     def _populate_price_badges(self, result):
+        # Prefer the web-like prominent price label if present.
+        if hasattr(self.ids, 'prop_price_line'):
+            return
+
         if not hasattr(self.ids, 'price_badges'):
             return
 
@@ -1474,6 +1419,11 @@ class PropertyDetailScreen(Screen):
         self._map_lat = lat
         self._map_lng = lng
         self._map_query = location or city or university
+
+        # Web-style "Limited" badge when precise location isn't available.
+        if hasattr(self.ids, 'map_limited_badge'):
+            limited = (lat is None or lng is None) and not location
+            self.ids.map_limited_badge.opacity = 1 if limited else 0
 
         if not hasattr(self.ids, 'map_info'):
             return
@@ -1519,7 +1469,8 @@ class PropertyDetailScreen(Screen):
             if not url:
                 continue
 
-            thumb = ImageThumb(orientation='vertical', size_hint=(None, None), size=(dp(240), dp(150)))
+            # Web thumb size: 120 x 180
+            thumb = ImageThumb(orientation='vertical', size_hint=(None, None), size=(dp(120), dp(180)))
             from kivy.graphics import Color, RoundedRectangle
             with thumb.canvas.before:
                 Color(0.94, 0.94, 0.94, 1)
@@ -1527,7 +1478,7 @@ class PropertyDetailScreen(Screen):
             thumb.bind(pos=lambda w, v: setattr(w.bg, 'pos', v))
             thumb.bind(size=lambda w, v: setattr(w.bg, 'size', v))
 
-            img = AsyncImage(source=url, allow_stretch=True, keep_ratio=True)
+            img = AsyncImage(source=url, fit_mode='contain')
             thumb.add_widget(img)
             thumb.bind(on_release=lambda _w, u=url: self.open_image_modal(u))
             container.add_widget(thumb)
@@ -1566,21 +1517,33 @@ class PropertyDetailScreen(Screen):
             return
 
         from kivy.uix.gridlayout import GridLayout
+        from kivy.graphics import Color, RoundedRectangle, Line
+
         grid = GridLayout(cols=2, spacing=dp(8), size_hint_y=None)
         grid.bind(minimum_height=grid.setter('height'))
 
-        for a in amenities[:20]:
-            lbl = Label(
-                text=f"• {a}",
-                color=(0.25, 0.25, 0.25, 1),
-                font_size=sp(13),
+        def _pill(text):
+            pill = Label(
+                text=str(text),
+                font_size=sp(12),
+                color=(0.2, 0.2, 0.2, 1),
+                halign='center',
+                valign='middle',
                 size_hint_y=None,
-                height=dp(22),
-                halign='left',
-                valign='middle'
+                height=dp(28),
             )
-            lbl.bind(size=lbl.setter('text_size'))
-            grid.add_widget(lbl)
+            pill.bind(size=pill.setter('text_size'))
+            with pill.canvas.before:
+                Color(0.97, 0.97, 0.97, 1)
+                pill.bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(10)])
+                Color(0.91, 0.91, 0.91, 1)
+                pill.bd = Line(rounded_rectangle=[pill.x, pill.y, pill.width, pill.height, dp(10)], width=1)
+            pill.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(10)])))
+            pill.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(10)])))
+            return pill
+
+        for a in amenities[:20]:
+            grid.add_widget(_pill(a))
 
         container.add_widget(grid)
 
@@ -1604,7 +1567,7 @@ class PropertyDetailScreen(Screen):
         try:
             from kivy.uix.popup import Popup
             content = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
-            content.add_widget(AsyncImage(source=image_url, allow_stretch=True, keep_ratio=True))
+            content.add_widget(AsyncImage(source=image_url, fit_mode='contain'))
             btn = Button(text='Close', size_hint_y=None, height=dp(44), background_normal='', background_color=(0.86, 0.86, 0.86, 1), color=(0.15, 0.15, 0.15, 1))
             content.add_widget(btn)
             popup = Popup(title='', content=content, size_hint=(0.92, 0.92))
@@ -1618,89 +1581,250 @@ class PropertyDetailScreen(Screen):
         if not self.current_property:
             return
         
-        reviews = self.current_property.get('reviews', [])
+        reviews = self.current_property.get('reviews', []) or []
         if not hasattr(self.ids, 'reviews_container'):
             return
-        
+
         container = self.ids.reviews_container
         container.clear_widgets()
-        
-        if not reviews or len(reviews) == 0:
+
+        total_reviews = len(reviews)
+        avg_rating = self.current_property.get('average_rating')
+
+        # Header rating summary (web-style)
+        if hasattr(self.ids, 'rating_summary') and hasattr(self.ids, 'reviews_star_row') and hasattr(self.ids, 'reviews_avg_score') and hasattr(self.ids, 'reviews_count'):
+            if total_reviews > 0 and avg_rating is not None:
+                self.ids.rating_summary.opacity = 1
+                self.ids.reviews_avg_score.text = f"{float(avg_rating):.1f}"
+                self.ids.reviews_count.text = f"{total_reviews} review" + ("s" if total_reviews != 1 else "")
+
+                stars_row = self.ids.reviews_star_row
+                stars_row.clear_widgets()
+                try:
+                    filled = int(round(float(avg_rating)))
+                except Exception:
+                    filled = 0
+                filled = max(0, min(5, filled))
+                for i in range(1, 6):
+                    stars_row.add_widget(Label(
+                        text='★' if i <= filled else '☆',
+                        font_size=sp(16),
+                        color=(0.96, 0.75, 0.04, 1),
+                        size_hint_x=None,
+                        width=dp(14),
+                        halign='center',
+                        valign='middle',
+                    ))
+            else:
+                self.ids.rating_summary.opacity = 0
+
+        if total_reviews == 0:
             container.add_widget(Label(
-                text='No reviews yet. Be the first to review!',
+                text='No reviews yet.',
                 color=(0.5, 0.5, 0.5, 1),
                 size_hint_y=None,
-                height=dp(40)
-            ))
-            return
-        
-        # Show average rating
-        avg_rating = self.current_property.get('average_rating')
-        if avg_rating:
-            rating_label = Label(
-                text=f"⭐ Average Rating: {avg_rating:.1f}/5.0 ({len(reviews)} reviews)",
-                color=(0, 0, 0, 1),
-                font_size='14sp',
-                size_hint_y=None,
-                height=dp(30),
+                height=dp(34),
                 halign='left',
-                valign='top'
-            )
-            rating_label.bind(size=rating_label.setter('text_size'))
-            container.add_widget(rating_label)
-        
-        # Show reviews
-        for review in reviews[:5]:  # Show only first 5
-            review_box = self.create_review_widget(review)
-            container.add_widget(review_box)
+                valign='middle'
+            ))
+            self._sync_reviews_toggle(total_reviews)
+            return
+
+        # Render reviews (web shows first 5 + show more)
+        limit = total_reviews if self._reviews_expanded else 5
+        for review in reviews[:limit]:
+            container.add_widget(self.create_review_widget(review))
+
+        self._sync_reviews_toggle(total_reviews)
     
     def create_review_widget(self, review):
         """Create a widget for displaying a review"""
-        box = BoxLayout(
-            orientation='vertical',
-            padding=[dp(10), dp(8)],
-            spacing=dp(4),
-            size_hint_y=None,
-            height=dp(90)
-        )
-        
-        from kivy.graphics import Color, RoundedRectangle
+        # Web-like review card: avatar + name + stars + date, then comment.
+        box = BoxLayout(orientation='vertical', padding=[0, dp(10)], spacing=dp(8), size_hint_y=None)
+        box.bind(minimum_height=box.setter('height'))
+
+        from kivy.graphics import Color, Line, RoundedRectangle
         with box.canvas.before:
-            Color(0.97, 0.97, 0.97, 1)
-            box.bg_rect = RoundedRectangle(pos=box.pos, size=box.size, radius=[dp(6)])
-        box.bind(pos=lambda w, v: setattr(w.bg_rect, 'pos', v))
-        box.bind(size=lambda w, v: setattr(w.bg_rect, 'size', v))
-        
-        # Rating stars
-        rating = review.get('rating', 0)
-        stars = '⭐' * rating
-        rating_label = Label(
-            text=f"{stars} ({rating}/5)",
-            color=(0.8, 0.6, 0, 1),
-            font_size='13sp',
-            size_hint_y=None,
-            height=dp(20),
+            Color(0, 0, 0, 0.08)
+            box.top_line = Line(points=[0, 0, 0, 0], width=1)
+
+        def _sync_line(_inst, _val):
+            # top border line
+            box.top_line.points = [box.x, box.top, box.right, box.top]
+
+        box.bind(pos=_sync_line, size=_sync_line)
+
+        head = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(44))
+
+        # Avatar
+        avatar = Label(text='A', size_hint=(None, None), size=(dp(40), dp(40)), bold=True, color=(0.12, 0.25, 0.68, 1), halign='center', valign='middle')
+        avatar.bind(size=avatar.setter('text_size'))
+        with avatar.canvas.before:
+            Color(0.93, 0.95, 1, 1)
+            avatar.bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(20)])
+        avatar.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+        avatar.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+
+        username = (review or {}).get('user_username') or ''
+        email = (review or {}).get('user_email') or ''
+        name = username or email or 'User'
+        initial = (name[:1] or 'U').upper()
+        avatar.text = initial
+
+        head.add_widget(avatar)
+
+        meta = BoxLayout(orientation='vertical', spacing=dp(2))
+        name_lbl = Label(text=str(name)[:30], bold=True, color=(0.13, 0.13, 0.13, 1), halign='left', valign='middle', size_hint_y=None, height=dp(18))
+        name_lbl.bind(size=name_lbl.setter('text_size'))
+        meta.add_widget(name_lbl)
+
+        stars_row = BoxLayout(orientation='horizontal', spacing=dp(2), size_hint_y=None, height=dp(18))
+        rating = int((review or {}).get('rating') or 0)
+        rating = max(0, min(5, rating))
+        for i in range(1, 6):
+            stars_row.add_widget(Label(
+                text='★' if i <= rating else '☆',
+                font_size=sp(14),
+                color=(0.96, 0.75, 0.04, 1),
+                size_hint_x=None,
+                width=dp(12),
+            ))
+
+        # Date
+        created_at = (review or {}).get('created_at') or ''
+        date_lbl = Label(text=str(created_at)[:10], font_size=sp(12), color=(0.45, 0.45, 0.45, 1), halign='left', valign='middle')
+        date_lbl.bind(size=date_lbl.setter('text_size'))
+
+        stars_and_date = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(18))
+        stars_and_date.add_widget(stars_row)
+        stars_and_date.add_widget(date_lbl)
+
+        meta.add_widget(stars_and_date)
+        head.add_widget(meta)
+
+        box.add_widget(head)
+
+        comment = Label(
+            text=str((review or {}).get('comment') or ''),
+            font_size=sp(12),
+            color=(0.45, 0.45, 0.45, 1),
             halign='left',
-            valign='top'
-        )
-        rating_label.bind(size=rating_label.setter('text_size'))
-        
-        # Review text
-        comment_label = Label(
-            text=review.get('comment', ''),
-            color=(0.3, 0.3, 0.3, 1),
-            font_size='12sp',
+            valign='top',
             size_hint_y=None,
-            height=dp(50),
-            halign='left',
-            valign='top'
         )
-        comment_label.bind(size=comment_label.setter('text_size'))
-        
-        box.add_widget(rating_label)
-        box.add_widget(comment_label)
-        
+        comment.bind(size=comment.setter('text_size'))
+        comment.bind(texture_size=lambda i, v: setattr(i, 'height', v[1] + dp(6)))
+        box.add_widget(comment)
+
         return box
+
+    def _sync_reviews_toggle(self, total_reviews: int):
+        if not hasattr(self.ids, 'reviews_toggle'):
+            return
+        if total_reviews > 5:
+            self.ids.reviews_toggle.opacity = 1
+            self.ids.reviews_toggle.disabled = False
+            self.ids.reviews_toggle.text = 'Show less' if self._reviews_expanded else 'Show more'
+        else:
+            self.ids.reviews_toggle.opacity = 0
+            self.ids.reviews_toggle.disabled = True
+
+    def toggle_reviews(self):
+        self._reviews_expanded = not self._reviews_expanded
+        self.load_reviews()
+
+    def _is_authenticated(self):
+        return bool(getattr(self.manager, 'token', None))
+
+    def _sync_review_form_state(self):
+        if not hasattr(self.ids, 'review_form'):
+            return
+        authed = self._is_authenticated()
+
+        # Show a web-like hint.
+        if hasattr(self.ids, 'review_form_title'):
+            self.ids.review_form_title.text = '' if authed else 'Login to write a review.'
+
+        self.ids.review_form.opacity = 1 if authed else 0
+        self.ids.review_form.disabled = False if authed else True
+
+        if authed and hasattr(self.ids, 'review_status'):
+            self.ids.review_status.text = ''
+
+        self.set_review_rating(self._review_rating)
+
+    def set_review_rating(self, value: int):
+        try:
+            v = int(value)
+        except Exception:
+            v = 5
+        v = max(1, min(5, v))
+        self._review_rating = v
+
+        # Update star buttons
+        for i in range(1, 6):
+            star_id = f'star_{i}'
+            if hasattr(self.ids, star_id):
+                self.ids[star_id].text = '★' if i <= v else '☆'
+        if hasattr(self.ids, 'review_rating_hint'):
+            self.ids.review_rating_hint.text = f"{v} star" + ("s" if v != 1 else "")
+
+    def submit_review(self):
+        if not self.current_property:
+            return
+        if not self._is_authenticated():
+            if hasattr(self.ids, 'review_status'):
+                self.ids.review_status.text = 'Please login to submit a review.'
+            return
+
+        prop_id = self.current_property.get('id')
+        if not prop_id:
+            return
+
+        if not hasattr(self.ids, 'review_comment'):
+            return
+        comment = (self.ids.review_comment.text or '').strip()
+        if not comment:
+            if hasattr(self.ids, 'review_status'):
+                self.ids.review_status.text = 'Please write a review.'
+            return
+
+        if hasattr(self.ids, 'review_status'):
+            self.ids.review_status.text = 'Submitting...'
+
+        import json
+        headers = {'Content-Type': 'application/json'}
+        headers['Authorization'] = f'Bearer {self.manager.token}'
+        body = json.dumps({'rating': int(self._review_rating), 'comment': comment})
+
+        def on_success(_req, _res):
+            if hasattr(self.ids, 'review_status'):
+                self.ids.review_status.text = 'Submitted.'
+            if hasattr(self.ids, 'review_comment'):
+                self.ids.review_comment.text = ''
+            # Refresh property details to include new review
+            self.load_property(prop_id)
+
+        def on_error(_req, error):
+            msg = 'Failed to submit review.'
+            try:
+                # When user already reviewed, API returns ValidationError detail.
+                if isinstance(error, dict):
+                    msg = error.get('detail') or msg
+            except Exception:
+                pass
+            if hasattr(self.ids, 'review_status'):
+                self.ids.review_status.text = msg
+
+        UrlRequest(
+            f"{API_BASE}properties/{prop_id}/reviews/",
+            on_success=on_success,
+            on_error=on_error,
+            on_failure=on_error,
+            req_body=body,
+            req_headers=headers,
+            method='POST',
+        )
     
     def contact_landlord(self):
         """Handle contact landlord button press"""
@@ -1984,6 +2108,14 @@ class LoginScreen(Screen):
         # Store user session
         session = SessionManager()
         session.set_user(result)
+
+        # Sync app-level auth state for KV bindings
+        try:
+            app = App.get_running_app()
+            if hasattr(app, 'refresh_auth_state'):
+                app.refresh_auth_state()
+        except Exception:
+            pass
         
         if hasattr(self.ids, 'login_status'):
             self.ids.login_status.text = 'Login successful!'
@@ -3140,89 +3272,203 @@ class ServicePropertiesScreen(Screen):
         cached_request(url, on_success=on_success, on_failure=on_failure)
 
     def create_property_card(self, prop):
-        """Create a compact Airbnb-style card."""
+        """Create a web-like accommodation card (same structure as PropertyListScreen)."""
         from kivy.uix.behaviors import ButtonBehavior
-        from kivy.graphics import Color, RoundedRectangle
+        from kivy.uix.widget import Widget
+        from kivy.graphics import Color, RoundedRectangle, Line
 
         class PropertyCard(ButtonBehavior, BoxLayout):
             pass
 
-        card = PropertyCard(
-            orientation='vertical',
-            padding=0,
-            spacing=dp(8),
-            size_hint_y=None,
-            height=dp(280),
-        )
+        w = Window.width
+        is_small = w < dp(600)
+
+        card_height = dp(332) if is_small else dp(350)
+        media_h = dp(200) if is_small else dp(220)
+
+        card = PropertyCard(orientation='vertical', size_hint_y=None, height=card_height, padding=0, spacing=0)
         card.opacity = 0
 
         with card.canvas.before:
+            Color(0, 0, 0, 0.08)
+            card.shadow_rect = RoundedRectangle(pos=(card.x, card.y - dp(4)), size=card.size, radius=[dp(22)])
             Color(1, 1, 1, 1)
-            card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(12)])
-        card.bind(pos=lambda w, v: setattr(w.bg_rect, 'pos', v))
-        card.bind(size=lambda w, v: setattr(w.bg_rect, 'size', v))
+            card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(22)])
+        with card.canvas.after:
+            Color(0.937, 0.902, 0.851, 1)
+            card.border_line = Line(rounded_rectangle=[card.x, card.y, card.width, card.height, dp(22)], width=1)
 
-        img = AsyncImage(
-            source=prop.get('thumbnail') or 'assets/placeholder.png',
-            size_hint_y=0.65,
-            allow_stretch=True,
-            keep_ratio=True,
-        )
-        card.add_widget(img)
+        def _sync(_inst, _val):
+            card.shadow_rect.pos = (card.x, card.y - dp(4))
+            card.shadow_rect.size = card.size
+            card.bg_rect.pos = card.pos
+            card.bg_rect.size = card.size
+            card.border_line.rounded_rectangle = [card.x, card.y, card.width, card.height, dp(22)]
 
-        # Like button overlay
-        like_btn = Button(
-            text='♡',
-            size_hint=(None, None),
-            size=(dp(40), dp(40)),
-            pos_hint={'right': 1, 'top': 0.65},
-            background_normal='',
-            background_color=[1, 1, 1, 0.8],
-            font_size=sp(20),
-            color=[0.8, 0.2, 0.2, 1],
-        )
-        if self.is_liked(prop.get('id')):
-            like_btn.text = '♥'
-            like_btn.color = [1, 0.2, 0.2, 1]
-        like_btn.bind(on_release=lambda btn, p=prop: self.toggle_like(p, btn))
-        card.add_widget(like_btn)
+        card.bind(pos=_sync, size=_sync)
 
-        info_box = BoxLayout(orientation='vertical', size_hint_y=0.35, padding=[dp(10), 0])
-        title = Label(
-            text=f"[b]{prop.get('title', 'Property')}[/b]",
-            markup=True,
-            font_size=sp(14),
+        header = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(58), padding=[dp(14), dp(10)], spacing=dp(10))
+
+        avatar = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)))
+        with avatar.canvas.before:
+            Color(1.0, 0.976, 0.949, 1)
+            avatar.bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(14)])
+            Color(0.878, 0.847, 0.780, 1)
+            avatar.bd = Line(rounded_rectangle=[avatar.x, avatar.y, avatar.width, avatar.height, dp(14)], width=1.2)
+        avatar.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+        avatar.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+        avatar.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
+        avatar.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
+
+        thumb = (prop or {}).get('thumbnail') or ''
+        if thumb:
+            avatar.add_widget(AsyncImage(source=thumb, fit_mode='contain'))
+        else:
+            avatar.add_widget(Label(text='🏠', font_size=sp(18), color=(0.55, 0.55, 0.55, 1), halign='center', valign='middle'))
+            avatar.children[0].bind(size=avatar.children[0].setter('text_size'))
+        header.add_widget(avatar)
+
+        meta = BoxLayout(orientation='vertical', spacing=dp(2))
+
+        location_text = ''
+        if (prop or {}).get('location'):
+            location_text = str(prop.get('location'))
+        elif (prop or {}).get('city'):
+            location_text = str(prop.get('city'))
+        elif self.city_name:
+            location_text = str(self.city_name)
+        else:
+            location_text = 'Available listing'
+
+        channel = Label(
+            text=location_text,
+            font_size=sp(12) if is_small else sp(13),
+            color=(0.25, 0.25, 0.25, 1),
             halign='left',
-            valign='top',
-            color=[0.2, 0.2, 0.2, 1],
+            valign='middle',
         )
-        title.bind(size=title.setter('text_size'))
-        info_box.add_widget(title)
+        channel.bind(size=channel.setter('text_size'))
+        meta.add_widget(channel)
 
-        ptype = prop.get('property_type')
+        ptype = (prop or {}).get('property_type') or ''
+        meta_line = ptype.replace('_', ' ').title() if ptype else ''
+        followers = Label(
+            text=meta_line,
+            font_size=sp(11) if is_small else sp(12),
+            color=(0.45, 0.45, 0.45, 1),
+            halign='left',
+            valign='middle',
+        )
+        followers.bind(size=followers.setter('text_size'))
+        meta.add_widget(followers)
+        header.add_widget(meta)
+
+        like_btn = Button(
+            text='♥' if self.is_liked((prop or {}).get('id')) else '♡',
+            size_hint=(None, None),
+            size=(dp(42), dp(42)),
+            background_normal='',
+            background_color=[1, 1, 1, 1],
+            font_size=sp(20),
+            color=[1, 0.2, 0.2, 1] if self.is_liked((prop or {}).get('id')) else [0.25, 0.25, 0.25, 1],
+        )
+        with like_btn.canvas.before:
+            Color(1, 1, 1, 0.9)
+            like_btn.bg = RoundedRectangle(pos=like_btn.pos, size=like_btn.size, radius=[dp(21)])
+            Color(0.90, 0.90, 0.90, 1)
+            like_btn.bd = Line(rounded_rectangle=[like_btn.x, like_btn.y, like_btn.width, like_btn.height, dp(21)], width=1)
+        like_btn.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
+        like_btn.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
+        like_btn.bind(on_release=lambda btn, p=prop: self.toggle_like(p, btn))
+        header.add_widget(Widget())
+        header.add_widget(like_btn)
+
+        card.add_widget(header)
+
+        media = BoxLayout(size_hint_y=None, height=media_h)
+        img_src = (prop or {}).get('thumbnail') or 'assets/placeholder.png'
+        media_img = AsyncImage(source=img_src)
+        configure_cover_image(media_img)
+        media.add_widget(media_img)
+        card.add_widget(media)
+
+        body = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(6))
+        title_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(28), spacing=dp(8))
+
+        title = Label(
+            text=str((prop or {}).get('title') or 'Property'),
+            font_size=sp(14) if is_small else sp(15),
+            bold=True,
+            color=(0.13, 0.13, 0.13, 1),
+            halign='left',
+            valign='middle',
+        )
+        if hasattr(title, 'shorten'):
+            title.shorten = True
+            title.shorten_from = 'right'
+        title.bind(size=title.setter('text_size'))
+        title_row.add_widget(title)
+
         is_monthly = ptype in ('long_term', 'shop')
         if is_monthly:
-            amount = prop.get('price_per_month')
-            label = 'month'
+            amount = (prop or {}).get('price_per_month')
+            suffix = '/month'
         else:
-            amount = prop.get('nightly_price')
-            label = 'night'
+            amount = (prop or {}).get('nightly_price')
+            suffix = '/night'
+        amount_text = str(amount) if amount not in (None, '') else 'N/A'
 
-        price_text = f"[b]${amount}[/b] / {label}" if amount not in (None, '') else f"[b]Price on request[/b]"
-        price = Label(
-            text=price_text,
-            markup=True,
-            font_size=sp(12),
-            halign='left',
-            valign='top',
-            color=[0.15, 0.15, 0.15, 1],
-            size_hint_y=None,
-            height=dp(24),
+        pill = Label(
+            text=f"🔥 ${amount_text} {suffix}",
+            font_size=sp(11) if is_small else sp(12),
+            color=(0.13, 0.13, 0.13, 1),
+            halign='center',
+            valign='middle',
+            size_hint=(None, None),
+            size=(dp(120), dp(26)),
         )
-        price.bind(size=price.setter('text_size'))
-        info_box.add_widget(price)
+        pill.bind(size=pill.setter('text_size'))
+        with pill.canvas.before:
+            Color(1, 0.976, 0.953, 1)
+            pill.bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(13)])
+            Color(1, 0.894, 0.776, 1)
+            pill.bd = Line(rounded_rectangle=[pill.x, pill.y, pill.width, pill.height, dp(13)], width=1)
+        pill.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
+        pill.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
 
-        card.add_widget(info_box)
+        title_row.add_widget(pill)
+        body.add_widget(title_row)
+
+        desc_text = str((prop or {}).get('description') or '')
+        if len(desc_text) > 110:
+            desc_text = desc_text[:107] + '...'
+        if desc_text:
+            desc = Label(
+                text=desc_text,
+                font_size=sp(12) if is_small else sp(13),
+                color=(0.35, 0.35, 0.35, 1),
+                halign='left',
+                valign='top',
+                size_hint_y=None,
+                height=dp(44),
+            )
+            desc.bind(size=desc.setter('text_size'))
+            body.add_widget(desc)
+
+        read_more = Label(
+            text='Read more',
+            font_size=sp(12),
+            bold=True,
+            color=(0.05, 0.43, 0.99, 1),
+            halign='left',
+            valign='middle',
+            size_hint_y=None,
+            height=dp(18),
+        )
+        read_more.bind(size=read_more.setter('text_size'))
+        body.add_widget(read_more)
+
+        card.add_widget(body)
 
         def on_click(_):
             det = self.manager.get_screen('property_detail')
@@ -3247,33 +3493,109 @@ class ServicePropertiesScreen(Screen):
             btn.color = [1, 0.2, 0.2, 1]
 
 
-sm = ScreenManager()
-sm.add_widget(HomeScreen(name='home'))
-sm.add_widget(UniversitiesScreen(name='universities'))
-sm.add_widget(PropertyListScreen(name='properties'))
-sm.add_widget(PropertyDetailScreen(name='property_detail'))
-sm.add_widget(PropertyContactScreen(name='property_contact'))
-sm.add_widget(LoginScreen(name='login'))
-sm.add_widget(RegisterScreen(name='register'))
-sm.add_widget(ProfileScreen(name='profile'))
-sm.add_widget(ChangePasswordScreen(name='change_password'))
-sm.add_widget(NotificationsScreen(name='notifications'))
-sm.add_widget(MyPropertiesScreen(name='my_properties'))
-sm.add_widget(LocationListScreen(name='location_list'))
-sm.add_widget(ShortTermScreen(name='short_term'))
-sm.add_widget(RealEstateScreen(name='real_estate'))
-sm.add_widget(ResortsScreen(name='resorts'))
-sm.add_widget(ShopsScreen(name='shops'))
-sm.add_widget(ServicePropertiesScreen(name='service_properties'))
+sm = None
 
 
 class OffRezApp(App):
+    # Exposed to KV so we can show web-like navbar items conditionally.
+    is_authenticated = BooleanProperty(False)
+    # Font used for unicode/emoji icons in headers (e.g., bell/menu). On Windows
+    # the default Kivy font may not include these glyphs.
+    icon_font = StringProperty('')
+
+    def _detect_icon_font(self):
+        try:
+            # Prefer Windows emoji font if available.
+            candidates = [
+                r"C:\\Windows\\Fonts\\seguiemj.ttf",  # Segoe UI Emoji
+                r"C:\\Windows\\Fonts\\seguisym.ttf",  # Segoe UI Symbol
+            ]
+            for p in candidates:
+                if os.path.exists(p):
+                    self.icon_font = p
+                    return
+        except Exception:
+            pass
+        self.icon_font = ''
+
     def load_kv(self, filename=None):
-        # Prevent Kivy's default auto-loading of `offrez.kv` (based on App class
-        # name) since we explicitly load KV files at module import time.
-        return
+        # Load KV after the App instance exists so `app.*` bindings can bind.
+        global KV_LOAD_ERROR
+
+        if getattr(self, '_offrez_kv_loaded', False):
+            return
+
+        def _load_one(path: str, label: str):
+            if not os.path.exists(path):
+                print(f'{label} KV file not found at', path)
+                return
+            if path in getattr(Builder, 'files', []):
+                return
+            try:
+                Builder.load_file(path)
+            except Exception:
+                log_path = os.path.join(os.path.dirname(__file__), 'offrez_kv_error.log')
+                with open(log_path, 'a', encoding='utf-8') as fh:
+                    fh.write(f"{datetime.utcnow().isoformat()} - KV load error ({label}):\n")
+                    fh.write(traceback.format_exc())
+                    fh.write('\n---\n')
+                print('Failed to load', label, 'KV; wrote traceback to', log_path)
+                KV_LOAD_ERROR = log_path
+
+        _load_one(KV_PATH, 'main')
+        _load_one(EXTRA_KV_PATH, 'extra')
+        self._offrez_kv_loaded = True
+
+    def refresh_auth_state(self):
+        try:
+            session = SessionManager()
+            self.is_authenticated = bool(session.is_logged_in())
+        except Exception:
+            self.is_authenticated = False
+
+    def open_web_path(self, path: str):
+        """Open a web route (e.g. /about/) in the system browser."""
+        try:
+            base = API_BASE
+            if '/api/' in base:
+                base = base.split('/api/', 1)[0] + '/'
+            path = (path or '').lstrip('/')
+            url = urllib.parse.urljoin(base, path)
+            webbrowser.open(url)
+        except Exception as e:
+            print('Failed to open web url:', e)
+
+    def open_about(self):
+        self.open_web_path('about/')
+
+    def open_contact(self):
+        self.open_web_path('contact/')
 
     def build(self):
+        self._detect_icon_font()
+        self.refresh_auth_state()
+        global sm
+
+        # Build screens after KV is loaded so widget rules/ids are applied.
+        sm = ScreenManager()
+        sm.add_widget(HomeScreen(name='home'))
+        sm.add_widget(UniversitiesScreen(name='universities'))
+        sm.add_widget(PropertyListScreen(name='properties'))
+        sm.add_widget(PropertyDetailScreen(name='property_detail'))
+        sm.add_widget(PropertyContactScreen(name='property_contact'))
+        sm.add_widget(LoginScreen(name='login'))
+        sm.add_widget(RegisterScreen(name='register'))
+        sm.add_widget(ProfileScreen(name='profile'))
+        sm.add_widget(ChangePasswordScreen(name='change_password'))
+        sm.add_widget(NotificationsScreen(name='notifications'))
+        sm.add_widget(MyPropertiesScreen(name='my_properties'))
+        sm.add_widget(LocationListScreen(name='location_list'))
+        sm.add_widget(ShortTermScreen(name='short_term'))
+        sm.add_widget(RealEstateScreen(name='real_estate'))
+        sm.add_widget(ResortsScreen(name='resorts'))
+        sm.add_widget(ShopsScreen(name='shops'))
+        sm.add_widget(ServicePropertiesScreen(name='service_properties'))
+
         # explicitly ensure the screen manager shows the home screen
         sm.current = 'home'
         print('App build complete; current screen =', sm.current)
@@ -3282,19 +3604,19 @@ class OffRezApp(App):
     def go_profile(self):
         session = SessionManager()
         if session.is_logged_in():
-            sm.current = 'profile'
+            self.root.current = 'profile'
         else:
-            sm.current = 'login'
+            self.root.current = 'login'
 
     def go_notifications(self):
         session = SessionManager()
         if session.is_logged_in():
-            sm.current = 'notifications'
+            self.root.current = 'notifications'
         else:
-            sm.current = 'login'
+            self.root.current = 'login'
 
     def show_options_menu(self):
-        home = sm.get_screen('home')
+        home = self.root.get_screen('home')
         home.show_options_menu()
 
     def do_logout(self):
@@ -3303,7 +3625,8 @@ class OffRezApp(App):
 
         def _done(*_args):
             session.clear_user()
-            sm.current = 'home'
+            self.refresh_auth_state()
+            self.root.current = 'home'
 
         try:
             UrlRequest(

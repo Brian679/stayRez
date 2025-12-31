@@ -23,15 +23,27 @@
       {% csrf_token %}
       <fieldset class="module aligned">
         {{ form.non_field_errors }}
-        {% for field in form %}
-          <div class="form-row">
-            <div>
-              {{ field.errors }}
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field }}
-              {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
-            </div>
+        {# Listing type first #}
+        <div class="form-row" data-field="property_type" data-group="always">
+          <div>
+            {{ form.property_type.errors }}
+            <label for="{{ form.property_type.id_for_label }}">{{ form.property_type.label }}</label>
+            {{ form.property_type }}
+            {% if form.property_type.help_text %}<div class="help">{{ form.property_type.help_text }}</div>{% endif %}
           </div>
+        </div>
+
+        {% for field in form %}
+          {% if field.name != 'property_type' %}
+            <div class="form-row" data-field="{{ field.name }}" data-group="common">
+              <div>
+                {{ field.errors }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+              </div>
+            </div>
+          {% endif %}
         {% endfor %}
 
         <div class="form-row">
@@ -70,4 +82,75 @@
     </form>
   </div>
 </div>
+
+<script>
+  (function () {
+    const typeEl = document.getElementById('id_property_type');
+    if (!typeEl) return;
+
+    const groupForField = {
+      university: 'students',
+      gender: 'students',
+      overnight: 'students',
+      sharing: 'students',
+      nightly_price: 'students',
+      price_per_month: 'students',
+      max_occupancy: 'students',
+      distance_to_campus_km: 'students',
+      caretaker_number: 'students',
+
+      square_meters: 'real_estate',
+      bedrooms: 'real_estate',
+      bathrooms: 'real_estate',
+
+      rating_stars: 'resort',
+      all_inclusive: 'resort',
+
+      shop_category: 'shop',
+    };
+
+    const alwaysCommon = new Set([
+      'title',
+      'description',
+      'city',
+      'is_available',
+      'location',
+      'latitude',
+      'longitude',
+      'contact_phone',
+      'house_number',
+      'amenities',
+    ]);
+
+    function setRowVisibility(row, visible) {
+      row.style.display = visible ? '' : 'none';
+    }
+
+    function updateGroups() {
+      const selected = (typeEl.value || '').trim();
+      const hasType = !!selected;
+
+      document.querySelectorAll('[data-field]').forEach((row) => {
+        const fieldName = row.getAttribute('data-field');
+        if (fieldName === 'property_type') return;
+
+        if (!hasType) {
+          setRowVisibility(row, false);
+          return;
+        }
+
+        if (alwaysCommon.has(fieldName)) {
+          setRowVisibility(row, true);
+          return;
+        }
+
+        const group = groupForField[fieldName];
+        setRowVisibility(row, group ? group === selected : false);
+      });
+    }
+
+    typeEl.addEventListener('change', updateGroups);
+    updateGroups();
+  })();
+</script>
 {% endblock %}

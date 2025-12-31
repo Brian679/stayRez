@@ -57,6 +57,95 @@ class ProfileForm(forms.ModelForm):
 
 
 class PropertyForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Ensure user selects listing type first.
+        if "property_type" in self.fields:
+            choices = list(self.fields["property_type"].choices)
+            if choices and choices[0][0] != "":
+                self.fields["property_type"].choices = [("", "Select listing type...")] + choices
+
+        # Better UX: placeholders for text/number inputs.
+        placeholders = {
+            "title": "e.g., Modern 2-bedroom apartment" ,
+            "description": "Describe the property (rooms, rules, what’s included, nearby places)...",
+            "location": "Street / area (e.g., Westlands, near ABC Mall)",
+            "latitude": "e.g., -1.292065",
+            "longitude": "e.g., 36.821946",
+            "contact_phone": "e.g., +254 700 000 000",
+            "house_number": "House/plot number (if applicable)",
+            "caretaker_number": "Caretaker/agent phone (optional)",
+            "nightly_price": "e.g., 3500",
+            "price_per_month": "e.g., 18000",
+            "amenities": "e.g., WiFi, Parking, Kitchen, Security",
+            "max_occupancy": "e.g., 4",
+            "distance_to_campus_km": "e.g., 1.5",
+            "square_meters": "e.g., 85",
+            "bedrooms": "e.g., 2",
+            "bathrooms": "e.g., 1",
+            "rating_stars": "1 to 5",
+            "shop_category": "e.g., Grocery, Salon, Electronics",
+        }
+
+        for name, field in self.fields.items():
+            widget = field.widget
+
+            # Add bootstrap-friendly classes where applicable.
+            if isinstance(widget, (forms.TextInput, forms.NumberInput, forms.EmailInput, forms.URLInput, forms.Textarea, forms.Select)):
+                widget.attrs.setdefault("class", "form-control")
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault("class", "form-check-input")
+
+            if name in placeholders and isinstance(widget, (forms.TextInput, forms.NumberInput, forms.Textarea)):
+                widget.attrs.setdefault("placeholder", placeholders[name])
+
+        # More descriptive dropdown placeholders
+        if "university" in self.fields and hasattr(self.fields["university"], "empty_label"):
+            self.fields["university"].empty_label = "Select university (students only)"
+        if "city" in self.fields and hasattr(self.fields["city"], "empty_label"):
+            self.fields["city"].empty_label = "Select city"
+
+    def clean(self):
+        cleaned = super().clean()
+        ptype = cleaned.get("property_type")
+
+        # If listing type isn't chosen yet, stop early.
+        if not ptype:
+            return cleaned
+
+        # Prevent stale/irrelevant data sticking around when users switch types.
+        student_only = {"university", "gender", "sharing", "overnight", "nightly_price", "max_occupancy", "distance_to_campus_km", "caretaker_number"}
+        real_estate_only = {"square_meters", "bedrooms", "bathrooms"}
+        resort_only = {"rating_stars", "all_inclusive"}
+        shop_only = {"shop_category"}
+
+        keep = set()
+        if ptype == "students":
+            keep |= student_only
+        elif ptype == "real_estate":
+            keep |= real_estate_only
+        elif ptype == "resort":
+            keep |= resort_only
+        elif ptype == "shop":
+            keep |= shop_only
+        elif ptype == "short_term":
+            # short-term stays: nightly price + capacity are the key extras
+            keep |= {"nightly_price", "max_occupancy", "rating_stars", "all_inclusive"}
+        elif ptype == "long_term":
+            # long-term stays: monthly price is the key extra
+            keep |= {"price_per_month", "max_occupancy"}
+
+        all_specific = student_only | real_estate_only | resort_only | shop_only | {"price_per_month"}
+        for fname in all_specific:
+            if fname in cleaned and fname not in keep:
+                if isinstance(self.fields.get(fname), forms.BooleanField):
+                    cleaned[fname] = False
+                else:
+                    cleaned[fname] = None if fname != "shop_category" else ""
+
+        return cleaned
+
     class Meta:
         model = Property
         fields = (

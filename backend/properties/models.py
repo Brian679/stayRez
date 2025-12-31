@@ -89,6 +89,9 @@ class Property(models.Model):
     # Pricing
     nightly_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     price_per_month = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Ranking / personalization (web list ordering)
+    view_count = models.PositiveIntegerField(default=0)
     
     # Amenities (comma-separated for simple search)
     amenities = models.TextField(blank=True, help_text="Comma-separated amenities (e.g., WiFi,Parking,Kitchen)")

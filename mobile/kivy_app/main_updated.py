@@ -351,6 +351,16 @@ class PropertyListScreen(Screen):
                 img = AsyncImage(source=image_url, size_hint_y=None, height=dp(180))
             else:
                 img = AsyncImage(source=image_url, size_hint_x=0.4, size_hint_y=1)
+            # Fill the image slot (like CSS object-fit: cover)
+            if hasattr(img, 'fit_mode'):
+                try:
+                    img.fit_mode = 'cover'
+                except Exception:
+                    pass
+            if hasattr(img, 'allow_stretch'):
+                img.allow_stretch = True
+            if hasattr(img, 'keep_ratio'):
+                img.keep_ratio = False
             card.add_widget(img)
             
             # Content container

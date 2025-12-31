@@ -100,12 +100,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "accounts.User"
 
-# JWT optional: use SimpleJWT if installed, else fall back to session auth (useful for dev/tests)
+# Auth: support both JWT (mobile/API clients) and session cookies (server-rendered web pages).
+# When SimpleJWT is installed, keep JWT auth enabled but also allow Django session auth.
 try:
     import rest_framework_simplejwt  # noqa
+
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
             "rest_framework_simplejwt.authentication.JWTAuthentication",
+            "rest_framework.authentication.SessionAuthentication",
         ),
     }
     SIMPLE_JWT = {
@@ -138,5 +141,5 @@ ECOCASH_ACCOUNT_HOLDER = os.getenv("ECOCASH_ACCOUNT_HOLDER", "T. Tayero")
 
 # Contact details (used on Contact Us page)
 CONTACT_ADDRESS = os.getenv("CONTACT_ADDRESS", "4376 Coldstream Chinhoyi")
-CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+263776487550")
+CONTACT_PHONE = os.getenv("CONTACT_PHONE", "+263786196541")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "+263785213532")

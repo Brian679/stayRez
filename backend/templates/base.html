@@ -214,7 +214,9 @@
       // Fetch notifications
       async function fetchNotifications() {
         try {
-          const response = await fetch('/api/notifications/');
+          const response = await fetch('/api/notifications/', {
+            credentials: 'same-origin'
+          });
           const data = await response.json();
 
           lastNotifications = Array.isArray(data) ? data : [];
@@ -258,6 +260,7 @@
         try {
           await fetch(`/api/notifications/${notificationId}/mark-read/`, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
               'X-CSRFToken': getCookie('csrftoken')
             }
@@ -286,6 +289,7 @@
             unread.map(n =>
               fetch(`/api/notifications/${n.id}/mark-read/`, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                   'X-CSRFToken': getCookie('csrftoken')
                 }

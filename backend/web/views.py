@@ -528,6 +528,13 @@ def university_properties(request, pk, service_slug=None):
     lng = request.GET.get("lng")
     radius = request.GET.get("radius_km")
     properties = None
+    related_properties = []
+
+    # Remember what this user searches for (session-based, works for anonymous users too)
+    # This is used as a weak personalization signal when `q` is empty.
+    session_terms = request.session.get("search_terms", {})
+    if not isinstance(session_terms, dict):
+        session_terms = {}
     if lat and lng:
         try:
             lat = float(lat)
@@ -558,16 +565,107 @@ def university_properties(request, pk, service_slug=None):
         except ValueError:
             properties = qs
     else:
+        # Smart ordering:
+        # - If user searched: order by match strength, then popularity
+        # - If user didn't search: use their prior search history (session) + popularity
+        from django.db.models import Case, IntegerField, Value, When, F
+
+        def _build_relevance_score(terms):
+            score_expr = Value(0, output_field=IntegerField())
+            for term in terms:
+                score_expr = score_expr + Case(
+                    When(title__icontains=term, then=Value(6)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+                score_expr = score_expr + Case(
+                    When(location__icontains=term, then=Value(4)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+                score_expr = score_expr + Case(
+                    When(amenities__icontains=term, then=Value(3)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+                score_expr = score_expr + Case(
+                    When(description__icontains=term, then=Value(2)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+                score_expr = score_expr + Case(
+                    When(city__name__icontains=term, then=Value(2)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            return score_expr
+
+        q_text = (q or "").strip()
+        search_terms = []
+        if q_text:
+            # Mirror the existing comma-separated behavior in the filter above
+            # (but only for scoring; filtering already happened).
+            search_terms = [t.strip() for t in q_text.split(",") if t.strip()]
+            for term in search_terms:
+                session_terms[term.lower()] = int(session_terms.get(term.lower(), 0)) + 1
+            request.session["search_terms"] = session_terms
+            request.session.modified = True
+        else:
+            # Use the top 3 prior search terms as a weak ranking hint.
+            search_terms = [k for k, _v in sorted(session_terms.items(), key=lambda kv: kv[1], reverse=True)[:3]]
+
+        # Existing explicit orders still work and override smart ranking.
         if order in ("price_asc", "price_desc"):
             qs = qs.order_by(price_field if order == "price_asc" else f"-{price_field}")
         elif order == "newest":
             qs = qs.order_by("-created_at")
-        properties = qs
+        elif order == "popular":
+            qs = qs.order_by("-view_count", "-created_at")
+        else:
+            # Default: recommended ordering
+            if search_terms:
+                qs = qs.annotate(relevance_score=_build_relevance_score(search_terms))
+                qs = qs.order_by("-relevance_score", "-view_count", "-created_at")
+            else:
+                qs = qs.order_by("-view_count", "-created_at")
 
-    # paginate results (works for QuerySet or list)
-    page_num = request.GET.get("page", 1)
-    paginator = Paginator(list(properties), 10)
-    page_obj = paginator.get_page(page_num)
+        # Related accommodations:
+        # - If a user searched, show additional items that match *any* term
+        #   (main results require all terms), ordered by popularity.
+        if q_text:
+            from django.db.models import Q
+
+            or_q = Q()
+            for term in search_terms:
+                or_q |= (
+                    Q(title__icontains=term)
+                    | Q(description__icontains=term)
+                    | Q(location__icontains=term)
+                    | Q(amenities__icontains=term)
+                    | Q(city__name__icontains=term)
+                )
+            base_qs = Property.objects.filter(
+                is_approved=True,
+                is_available=True,
+                university_id=pk,
+                property_type="students",
+            )
+            if gender and gender != "all":
+                base_qs = base_qs.filter(gender=gender)
+            if sharing and sharing != "any":
+                base_qs = base_qs.filter(sharing=sharing)
+            if overnight == "1":
+                base_qs = base_qs.filter(overnight=True)
+
+            related_properties = list(
+                base_qs.filter(or_q)
+                .exclude(pk__in=qs.values("pk"))
+                .order_by("-view_count", "-created_at")[:6]
+            )
+        else:
+            related_properties = list(qs.order_by("-view_count", "-created_at")[:6])
+
+        properties = qs
 
     uni = University.objects.get(pk=pk)
     
@@ -587,7 +685,8 @@ def university_properties(request, pk, service_slug=None):
             pref.save()
     
     return render(request, "web/university_properties.html", {
-        "page_obj": page_obj, 
+        "properties": properties,
+        "related_properties": related_properties,
         "university": uni,
         "uni": uni,  # Kept for backward compatibility
         "service_slug": service_slug,
@@ -620,6 +719,14 @@ def property_detail(request, pk):
     from properties.models import Property
     from payments.models import AdminFeePayment
     from django.db.models import Avg
+
+    # Track popularity for ordering on accommodation lists.
+    try:
+        from django.db.models import F
+        Property.objects.filter(pk=pk).update(view_count=F("view_count") + 1)
+    except Exception:
+        pass
+
     prop = get_object_or_404(Property, pk=pk)
     
     # Check if user has paid admin fee for this university
@@ -1129,7 +1236,7 @@ def change_password(request):
             return redirect('web-profile')
     else:
         form = PasswordChangeForm(request.user)
-    return render(request, 'web/change_password.html', {'form': form})
+    return render(request, 'web/password_change.html', {'form': form})
 
 
 def password_reset_request(request):

@@ -3,21 +3,25 @@
 <h3>Add Property</h3>
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+        {# Listing type first #}
+        <div class="row mb-3 align-items-center" data-field="property_type" data-group="always">
+            <label for="{{ form.property_type.id_for_label }}" class="col-sm-4 col-form-label">{{ form.property_type.label }}</label>
+            <div class="col-sm-8">
+                {{ form.property_type }}
+                {% if form.property_type.errors %}
+                    <div class="text-danger">
+                        {% for error in form.property_type.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Remaining fields (hidden until type selected) #}
         {% for field in form %}
-            {% if field.name == 'amenities' %}
-                <div class="mb-3">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="text-danger">
-                            {% for error in field.errors %}{{ error }}{% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            {% else %}
-                <div class="row mb-3 align-items-center">
-                    <label for="{{ field.id_for_label }}" class="col-sm-4 col-form-label">{{ field.label }}</label>
-                    <div class="col-sm-8">
+            {% if field.name != 'property_type' %}
+                {% if field.name == 'amenities' %}
+                    <div class="mb-3" data-field="amenities" data-group="common">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}
                             <div class="text-danger">
@@ -25,7 +29,19 @@
                             </div>
                         {% endif %}
                     </div>
-                </div>
+                {% else %}
+                    <div class="row mb-3 align-items-center" data-field="{{ field.name }}" data-group="common">
+                        <label for="{{ field.id_for_label }}" class="col-sm-4 col-form-label">{{ field.label }}</label>
+                        <div class="col-sm-8">
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger">
+                                    {% for error in field.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             {% endif %}
         {% endfor %}
 
@@ -37,4 +53,80 @@
         </div>
     <button type="submit" class="btn btn-success">Create Property</button>
 </form>
+
+<script>
+    (function () {
+        const typeEl = document.getElementById('id_property_type');
+        if (!typeEl) return;
+
+        const groupForField = {
+            // students accommodation
+            university: 'students',
+            gender: 'students',
+            overnight: 'students',
+            sharing: 'students',
+            nightly_price: 'students',
+            price_per_month: 'students',
+            max_occupancy: 'students',
+            distance_to_campus_km: 'students',
+            caretaker_number: 'students',
+
+            // real estate
+            square_meters: 'real_estate',
+            bedrooms: 'real_estate',
+            bathrooms: 'real_estate',
+
+            // resort
+            rating_stars: 'resort',
+            all_inclusive: 'resort',
+
+            // shop
+            shop_category: 'shop',
+        };
+
+        // fields that should show for any selected type
+        const alwaysCommon = new Set([
+            'title',
+            'description',
+            'city',
+            'is_available',
+            'location',
+            'latitude',
+            'longitude',
+            'contact_phone',
+            'house_number',
+            'amenities',
+        ]);
+
+        function setRowVisibility(row, visible) {
+            row.style.display = visible ? '' : 'none';
+        }
+
+        function updateGroups() {
+            const selected = (typeEl.value || '').trim();
+            const hasType = !!selected;
+
+            document.querySelectorAll('[data-field]').forEach((row) => {
+                const fieldName = row.getAttribute('data-field');
+                if (fieldName === 'property_type') return;
+
+                if (!hasType) {
+                    setRowVisibility(row, false);
+                    return;
+                }
+
+                if (alwaysCommon.has(fieldName)) {
+                    setRowVisibility(row, true);
+                    return;
+                }
+
+                const group = groupForField[fieldName];
+                setRowVisibility(row, group ? group === selected : false);
+            });
+        }
+
+        typeEl.addEventListener('change', updateGroups);
+        updateGroups();
+    })();
+</script>
 {% endblock %}
