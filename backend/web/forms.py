@@ -115,7 +115,7 @@ class PropertyForm(forms.ModelForm):
             return cleaned
 
         # Prevent stale/irrelevant data sticking around when users switch types.
-        student_only = {"university", "gender", "sharing", "overnight", "nightly_price", "max_occupancy", "distance_to_campus_km", "caretaker_number"}
+        student_only = {"university", "gender", "sharing", "overnight", "nightly_price", "price_per_month", "max_occupancy", "distance_to_campus_km", "caretaker_number"}
         real_estate_only = {"square_meters", "bedrooms", "bathrooms"}
         resort_only = {"rating_stars", "all_inclusive"}
         shop_only = {"shop_category"}
@@ -136,7 +136,7 @@ class PropertyForm(forms.ModelForm):
             # long-term stays: monthly price is the key extra
             keep |= {"price_per_month", "max_occupancy"}
 
-        all_specific = student_only | real_estate_only | resort_only | shop_only | {"price_per_month"}
+        all_specific = student_only | real_estate_only | resort_only | shop_only
         for fname in all_specific:
             if fname in cleaned and fname not in keep:
                 if isinstance(self.fields.get(fname), forms.BooleanField):

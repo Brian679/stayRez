@@ -505,7 +505,7 @@ h2 {
 /* Fixed Search Bar */
 .search-bar {
   position: fixed;
-  top: 75px;
+  top: calc(var(--app-header-height) + 5px);
   left: 50%;
   transform: translateX(-50%);
   max-width: 600px;
@@ -517,7 +517,7 @@ h2 {
 
 @media (max-width: 576px) {
   .search-bar {
-    top: 70px;
+    top: calc(var(--app-header-height) + 5px);
     max-width: 90%;
   }
 }

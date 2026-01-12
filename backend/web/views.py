@@ -10,6 +10,8 @@ from django.db import models
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from properties.models import Property, PropertyImage, University, City
+from django.http import Http404
+from django.utils.text import slugify
 
 
 def admin_required(view_func):
@@ -62,9 +64,20 @@ def home(request):
         else:
             image_url = f'/static/images/{service.slug}.jpg'
         
+        url = '/'
+        if service.property_type:
+            property_type = _SERVICE_TYPE_ALIASES.get(
+                _normalize_service_property_type(service.property_type),
+                _normalize_service_property_type(service.property_type),
+            )
+            if property_type == 'students':
+                url = reverse('students-accommodation-universities')
+            else:
+                url = reverse('service-entry', kwargs={'service_slug': service.slug})
+
         services.append({
             'name': service.name,
-            'url': reverse('service-entry', kwargs={'service_slug': service.slug}) if service.property_type else '/',
+            'url': url,
             'bg': service.background_color,
             'image': image_url,
             'description': service.description,
@@ -195,7 +208,7 @@ def service_entry(request, service_slug):
         return redirect('/')
 
     if property_type == 'students':
-        return universities(request, service_slug=service_slug)
+        return redirect('students-accommodation-universities', permanent=True)
 
     if property_type == 'long_term':
         return longterm_cities(request, service_slug=service_slug)
@@ -441,6 +454,56 @@ def universities(request, service_slug=None):
     from properties.models import University
     unis = University.objects.all().order_by('city__name', 'name')
     return render(request, "web/universities.html", {"unis": unis, "service_slug": service_slug})
+
+
+def _get_university_by_slug_or_404(university_slug: str) -> University:
+    if not university_slug:
+        raise Http404("University not found")
+
+    # Fast path: most slugs are simply hyphenated names.
+    guess_name = " ".join([p for p in str(university_slug).strip().replace("-", " ").split() if p])
+    if guess_name:
+        qs = University.objects.filter(name__iexact=guess_name)
+        if qs.count() == 1:
+            return qs.first()
+
+    # Fallback: compare slugified names.
+    for uni in University.objects.all():
+        if slugify(uni.name) == university_slug:
+            return uni
+
+    raise Http404("University not found")
+
+
+def university_properties_by_slug(request, university_slug):
+    uni = _get_university_by_slug_or_404(university_slug)
+    return university_properties(request, pk=uni.pk, service_slug=None)
+
+
+def student_property_detail(request, university_slug, property_slug):
+    uni = _get_university_by_slug_or_404(university_slug)
+    qs = Property.objects.filter(university=uni, property_type='students', is_approved=True)
+    prop = None
+    for candidate in qs.order_by('-created_at', '-pk'):
+        if slugify(candidate.title) == property_slug:
+            prop = candidate
+            break
+    if prop is None:
+        raise Http404("Accommodation not found")
+    return property_detail(request, pk=prop.pk)
+
+
+def redirect_students_universities(request):
+    return redirect('students-accommodation-universities', permanent=True)
+
+
+def redirect_students_university_properties(request, pk):
+    uni = get_object_or_404(University, pk=pk)
+    return redirect(
+        'students-accommodation-university',
+        university_slug=slugify(uni.name),
+        permanent=True,
+    )
 
 
 def university_properties(request, pk, service_slug=None):
@@ -728,6 +791,23 @@ def property_detail(request, pk):
         pass
 
     prop = get_object_or_404(Property, pk=pk)
+
+    # Canonicalize student accommodation detail URLs.
+    try:
+        current_name = getattr(getattr(request, 'resolver_match', None), 'url_name', None)
+    except Exception:
+        current_name = None
+    if (
+        prop.property_type == 'students'
+        and prop.university_id
+        and current_name != 'students-accommodation-detail'
+    ):
+        return redirect(
+            'students-accommodation-detail',
+            university_slug=slugify(prop.university.name),
+            property_slug=slugify(prop.title),
+            permanent=True,
+        )
     
     # Check if user has paid admin fee for this university
     has_paid = False

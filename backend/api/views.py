@@ -758,17 +758,60 @@ class ContactLandlordView(generics.GenericAPIView):
             # decrement uses and return contact
             if active.uses_remaining <= 0:
                 return Response({"detail": "No remaining uses on your approved payment. Please pay again."}, status=403)
-            active.uses_remaining -= 1
-            active.save()
+            # Match web behavior: do not decrement again if the user already viewed this property's contact.
+            try:
+                from payments.models import ContactView
+
+                already_viewed = ContactView.objects.filter(payment=active, property=prop).exists()
+                if not already_viewed:
+                    ContactView.objects.create(payment=active, property=prop)
+                    active.uses_remaining -= 1
+                    active.save(update_fields=["uses_remaining"])
+            except Exception:
+                # Fallback to original behavior if ContactView is unavailable for any reason.
+                active.uses_remaining -= 1
+                active.save(update_fields=["uses_remaining"])
             data = {
                 "house_number": prop.house_number,
                 "contact_phone": prop.contact_phone,
                 "caretaker_number": prop.caretaker_number,
                 "latitude": prop.latitude,
                 "longitude": prop.longitude,
+                "has_paid": True,
+                "uses_remaining": active.uses_remaining,
             }
             # optional: create a small notification to admin about the contact view
             return Response(data)
+
+        # No active payment: check if user has a pending/declined/canceled confirmation (web shows status UI).
+        try:
+            recent_conf = (
+                PaymentConfirmation.objects
+                .select_related("payment", "payment__university")
+                .filter(payment__user=user, payment__university=prop.university)
+                .order_by("-submitted_at")
+                .first()
+            )
+        except Exception:
+            recent_conf = None
+
+        if recent_conf is not None and recent_conf.status in ("pending", "declined", "canceled"):
+            return Response(
+                {
+                    "detail": "No approved payment found.",
+                    "payment_status": recent_conf.status,
+                    "payment": {
+                        "id": recent_conf.payment_id,
+                        "amount": float(recent_conf.payment.amount),
+                        "allowed_accommodations": int(recent_conf.payment.allowed_accommodations),
+                    },
+                    "payment_confirmation": {
+                        "id": recent_conf.id,
+                        "status": recent_conf.status,
+                    },
+                },
+                status=402,
+            )
 
         # if no active payment, expect students number optionally
         students = request.data.get("students")

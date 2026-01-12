@@ -54,7 +54,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     {% block extra_head %}{% endblock %}
     <style>
-        :root { --offrez-black: #000; --offrez-yellow: #ffd700; }
+      :root {
+        --offrez-black: #000;
+        --offrez-yellow: #ffd700;
+        --app-header-height: clamp(60px, 10vh, 80px);
+      }
         body { background: #fff; color: #111; }
         .navbar-brand.brand { 
             font-weight:700; 
@@ -77,6 +81,7 @@
             right: 0;
             width: 100%;
             z-index: 1050;
+          min-height: var(--app-header-height);
         }
 
         .navbar a {
@@ -85,7 +90,7 @@
         
         /* Add padding to body to account for fixed navbar */
         body {
-            padding-top: 70px;
+          padding-top: var(--app-header-height);
         }
         
         /* Global yellow button styles */
@@ -159,7 +164,7 @@
   <body>
     <nav class="navbar navbar-expand-lg">
       <div class="container">
-        <a class="navbar-brand brand" href="/"> <str class="off">off</str><str class="rez">Rez</str></a>
+        <a class="navbar-brand brand" href="/"> <span class="off">off</span><span class="rez">Rez</span></a>
 
         <div class="d-flex align-items-center ms-auto order-1 order-lg-2">
           <!-- Notifications (kept out of collapsed menu on small screens) -->
@@ -169,7 +174,7 @@
               <i class="bi bi-bell"></i>
               <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
             </a>
-            <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;" id="notificationDropdown">
+            <ul class="dropdown-menu dropdown-menu-end" style="width: min(350px, 92vw);" id="notificationDropdown">
               <li><h6 class="dropdown-header">Notifications</h6></li>
               <li><hr class="dropdown-divider"></li>
               <li><div id="notificationList" class="px-2"></div></li>

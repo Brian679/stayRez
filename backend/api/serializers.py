@@ -39,6 +39,8 @@ class PropertySerializer(serializers.ModelSerializer):
     distance_km = serializers.SerializerMethodField()
     city_name = serializers.CharField(source="city.name", read_only=True)
     university_name = serializers.CharField(source="university.name", read_only=True)
+    gender_display = serializers.CharField(source="get_gender_display", read_only=True)
+    sharing_display = serializers.CharField(source="get_sharing_display", read_only=True)
 
     class Meta:
         model = Property
@@ -55,8 +57,11 @@ class PropertySerializer(serializers.ModelSerializer):
             "price_per_month",
             "location",
             "gender",
+            "gender_display",
             "sharing",
+            "sharing_display",
             "overnight",
+            "max_occupancy",
             "thumbnail",
             "average_rating",
             "distance_km",

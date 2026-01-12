@@ -1,5 +1,6 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
+from django.utils.text import slugify
 
 from properties.models import Property, Service, University
 
@@ -13,7 +14,7 @@ class StaticViewSitemap(Sitemap):
             "web-home",
             "web-about",
             "web-contact",
-            "students-universities",
+            "students-accommodation-universities",
             "longterm-cities",
             "longterm-properties",
             "shortterm-cities",
@@ -41,6 +42,14 @@ class PropertySitemap(Sitemap):
         return obj.created_at
 
     def location(self, obj):
+        if getattr(obj, 'property_type', None) == 'students' and getattr(obj, 'university_id', None):
+            return reverse(
+                "students-accommodation-detail",
+                kwargs={
+                    "university_slug": slugify(obj.university.name),
+                    "property_slug": slugify(obj.title),
+                },
+            )
         return reverse("web-property-detail", args=[obj.pk])
 
 
@@ -63,7 +72,10 @@ class UniversitySitemap(Sitemap):
         return University.objects.all().order_by("name")
 
     def location(self, obj):
-        return reverse("students-university-properties", args=[obj.pk])
+        return reverse(
+            "students-accommodation-university",
+            kwargs={"university_slug": slugify(obj.name)},
+        )
 
 
 sitemaps = {

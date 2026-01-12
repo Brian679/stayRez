@@ -8,14 +8,20 @@ class WebAuthTests(TestCase):
         url = reverse('web-register')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        resp = self.client.post(url, {'email': 'web@example.com', 'password': 'pass', 'full_name': 'Web', 'role': 'general'})
+        resp = self.client.post(url, {
+            'username': 'webuser',
+            'email': 'web@example.com',
+            'password': 'pass12345',
+            'full_name': 'Web',
+            'role': 'general'
+        })
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(User.objects.filter(email='web@example.com').exists())
 
     def test_login_and_profile(self):
-        u = User.objects.create_user(email='x@example.com', password='pass', full_name='X')
+        u = User.objects.create_user(email='x@example.com', password='pass12345', full_name='X', username='x')
         login_url = reverse('web-login')
-        resp = self.client.post(login_url, {'username': 'x@example.com', 'password': 'pass'})
+        resp = self.client.post(login_url, {'identifier': 'x@example.com', 'password': 'pass12345'})
         # login redirects
         self.assertEqual(resp.status_code, 302)
         profile_url = reverse('web-profile')
@@ -27,11 +33,15 @@ class WebAuthTests(TestCase):
         # verify home page has a link to the students universities page
         resp = self.client.get(reverse('web-home'))
         self.assertEqual(resp.status_code, 200)
-        self.assertIn('/students/', resp.content.decode())
+        self.assertIn('/students-accommodation/universities/', resp.content.decode())
 
         # create a sample university and ensure university card links to properties page
         from properties.models import University
         uni = University.objects.create(name='MapUni', admin_fee_per_head=10)
         resp2 = self.client.get(reverse('students-universities'))
-        self.assertEqual(resp2.status_code, 200)
-        self.assertIn(f"/students/university/{uni.id}/", resp2.content.decode())
+        # old /students/ URL should permanently redirect to canonical route
+        self.assertEqual(resp2.status_code, 301)
+
+        resp3 = self.client.get(reverse('students-accommodation-universities'))
+        self.assertEqual(resp3.status_code, 200)
+        self.assertIn(f"/students-accommodation/{uni.name.lower()}/", resp3.content.decode())

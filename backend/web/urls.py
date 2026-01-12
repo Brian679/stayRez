@@ -6,8 +6,14 @@ urlpatterns = [
     path("", views.home, name="web-home"),
     path("about/", views.about_view, name="web-about"),
     path("contact/", views.contact_view, name="web-contact"),
-    path("students/", views.universities, name="students-universities"),
-    path("students/university/<int:pk>/", views.university_properties, name="students-university-properties"),
+    # Canonical students accommodation URLs
+    path("students-accommodation/universities/", views.universities, name="students-accommodation-universities"),
+    path("students-accommodation/<slug:university_slug>/", views.university_properties_by_slug, name="students-accommodation-university"),
+    path("students-accommodation/<slug:university_slug>/<slug:property_slug>/", views.student_property_detail, name="students-accommodation-detail"),
+
+    # Back-compat redirects (old URLs)
+    path("students/", views.redirect_students_universities, name="students-universities"),
+    path("students/university/<int:pk>/", views.redirect_students_university_properties, name="students-university-properties"),
     path("longterm/", views.longterm_cities, name="longterm-cities"),
     path("longterm/properties/", views.longterm_properties, name="longterm-properties"),
     path("shortterm/", views.shortterm_cities, name="shortterm-cities"),

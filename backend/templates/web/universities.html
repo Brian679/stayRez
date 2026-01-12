@@ -84,7 +84,7 @@ p.text-muted {
 
   <div class="uni-grid">
     {% for uni in unis %}
-        <a href="{% if service_slug %}{% url 'service-university-properties' service_slug=service_slug pk=uni.id %}{% else %}{% url 'students-university-properties' uni.id %}{% endif %}" class="card uni-card" id="uni-{{ uni.id }}" data-uni-id="{{ uni.id }}">
+        <a href="{% if service_slug %}{% url 'service-university-properties' service_slug=service_slug pk=uni.id %}{% else %}{% url 'students-accommodation-university' university_slug=uni.name|slugify %}{% endif %}" class="card uni-card" id="uni-{{ uni.id }}" data-uni-id="{{ uni.id }}">
       <div class="card-body">
         <h5 class="card-title uni-name text-center">{{ uni.name }}</h5>
         {% if uni.city %}

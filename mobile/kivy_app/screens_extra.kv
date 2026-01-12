@@ -713,45 +713,108 @@
                         spacing: dp(10)
 
 <PropertyContactScreen>:
-    BoxLayout:
-        orientation: 'vertical'
-        padding: 16
-        spacing: 12
+    FloatLayout:
         canvas.before:
             Color:
-                rgba: 1, 1, 1, 1
+                rgba: 0.973, 0.976, 0.980, 1
             Rectangle:
                 pos: self.pos
                 size: self.size
-        # Header
-        BoxLayout:
-            size_hint_y: None
-            height: '56dp'
-            Button:
-                text: '← Back'
-                size_hint_x: None
-                width: '80dp'
-                background_color: 0, 0, 0, 0
-                color: 0, 0.4, 0.8, 1
-                on_release: app.root.current = 'property_detail'
-            Label:
-                id: contact_title
-                text: '[b]Contact Landlord[/b]'
-                markup: True
-                font_size: '20sp'
-                color: 0, 0, 0, 1
-                halign: 'left'
-                valign: 'middle'
-                text_size: self.size
-        # Contact Content
+
         ScrollView:
+            do_scroll_x: False
+            bar_width: dp(6)
             BoxLayout:
-                id: contact_container
                 orientation: 'vertical'
-                padding: 8
-                spacing: 16
                 size_hint_y: None
                 height: self.minimum_height
+                spacing: dp(12)
+                padding: [dp(12), dp(16), dp(12), dp(16)]
+
+                # Back link (web: "Back to Property")
+                Button:
+                    id: contact_back
+                    text: '← Back to Property'
+                    size_hint_y: None
+                    height: dp(40)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 0.05, 0.43, 0.99, 1
+                    bold: True
+                    halign: 'left'
+                    on_release: app.root.current = 'property_detail'
+
+                # Centered contact card (web)
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_x: None
+                    width: min(root.width - dp(24), dp(760))
+                    pos_hint: {'center_x': 0.5}
+                    size_hint_y: None
+                    height: self.minimum_height
+                    canvas.before:
+                        Color:
+                            rgba: 1, 1, 1, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(16),]
+                        Color:
+                            rgba: 0, 0, 0, 0.10
+                        Line:
+                            width: 1
+                            rounded_rectangle: (self.x, self.y, self.width, self.height, dp(16))
+
+                    # Card header (web: yellow)
+                    BoxLayout:
+                        orientation: 'vertical'
+                        padding: [dp(16), dp(18)]
+                        spacing: dp(6)
+                        size_hint_y: None
+                        height: self.minimum_height
+                        canvas.before:
+                            Color:
+                                rgba: 1, 0.84, 0, 1
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(16), dp(16), 0, 0]
+                        Label:
+                            id: contact_title
+                            text: 'Contact Landlord'
+                            font_size: sp(22)
+                            bold: True
+                            color: 0, 0, 0, 1
+                            halign: 'center'
+                            valign: 'middle'
+                            text_size: self.size
+                            size_hint_y: None
+                            height: self.texture_size[1] + dp(4)
+                        Label:
+                            id: contact_property_name
+                            text: ''
+                            font_size: sp(13)
+                            color: 0, 0, 0, 0.75
+                            halign: 'center'
+                            valign: 'middle'
+                            text_size: self.size
+                            size_hint_y: None
+                            height: self.texture_size[1] + dp(4)
+
+                    # Card body
+                    BoxLayout:
+                        orientation: 'vertical'
+                        padding: [dp(16), dp(16)]
+                        spacing: dp(12)
+                        size_hint_y: None
+                        height: self.minimum_height
+
+                        BoxLayout:
+                            id: contact_container
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            spacing: dp(12)
 
 <LocationListScreen>:
     FloatLayout:
@@ -766,7 +829,7 @@
         BoxLayout:
             size_hint: 1, 0.1
             pos_hint: {'top': 1, 'x': 0}
-            padding: [dp(12), dp(8)]
+            padding: [dp(8) if root.width < dp(360) else dp(12), dp(6) if root.width < dp(360) else dp(8)]
             spacing: dp(8)
             canvas.before:
                 Color:
@@ -791,8 +854,9 @@
             Label:
                 text: '[b]off[/b][color=#ffd700]Rez[/color]'
                 markup: True
-                size_hint_x: 0.6
-                font_size: sp(20) if root.width < dp(600) else sp(24)
+                size_hint_x: None
+                width: min(dp(140), root.width * 0.42)
+                font_size: sp(18) if root.width < dp(360) else (sp(20) if root.width < dp(600) else sp(24))
                 halign: 'left'
                 valign: 'middle'
                 text_size: self.size
@@ -801,18 +865,18 @@
             Button:
                 text: '🔔'
                 size_hint_x: None
-                width: dp(45)
+                width: dp(40) if root.width < dp(360) else dp(45)
                 background_normal: ''
                 background_color: 0, 0, 0, 0
-                font_size: sp(20)
+                font_size: sp(18) if root.width < dp(360) else sp(20)
                 on_release: app.go_notifications()
             Button:
                 text: 'Profile'
                 size_hint_x: None
-                width: dp(84)
+                width: dp(72) if root.width < dp(360) else dp(84)
                 background_normal: ''
                 background_color: 0, 0, 0, 0
-                font_size: sp(14)
+                font_size: sp(13) if root.width < dp(360) else sp(14)
                 color: 0, 0, 0, 1
                 on_release: app.go_profile()
         

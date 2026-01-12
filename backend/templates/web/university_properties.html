@@ -5,7 +5,7 @@
 /* University Selector Banner - Minimal, No Background */
 .university-selector-banner {
   position: fixed;
-  top: 75px;
+  top: calc(var(--app-header-height) + 5px);
   right: 15px;
   background: transparent;
   padding: 6px 12px;
@@ -26,7 +26,7 @@
 
 .university-dropdown {
   position: fixed;
-  top: 110px;
+  top: calc(var(--app-header-height) + 40px);
   right: 15px;
   background: #fff;
   border-radius: 8px;
@@ -106,7 +106,7 @@
 /* Fixed Search Bar - Minimal, No Background */
 .search-bar {
   position: fixed;
-  top: 75px;
+  top: calc(var(--app-header-height) + 5px);
   left: 50%;
   transform: translateX(-50%);
   max-width: 600px;
@@ -118,7 +118,7 @@
 
 @media (max-width: 576px) {
   .search-bar {
-    top: 70px;
+    top: calc(var(--app-header-height) + 5px);
     max-width: 90%;
   }
 }
@@ -584,7 +584,7 @@ html {
 
 <div class="university-dropdown" id="universityDropdown">
   {% for uni in universities %}
-    <a href="{% if service_slug %}{% url 'service-university-properties' service_slug=service_slug pk=uni.id %}{% else %}{% url 'students-university-properties' uni.id %}{% endif %}" class="university-dropdown-item {% if uni.id == university.id %}active{% endif %}">
+    <a href="{% if service_slug %}{% url 'service-university-properties' service_slug=service_slug pk=uni.id %}{% else %}{% url 'students-accommodation-university' university_slug=uni.name|slugify %}{% endif %}" class="university-dropdown-item {% if uni.id == university.id %}active{% endif %}">
       {{ uni.name }}
     </a>
   {% endfor %}
@@ -613,7 +613,7 @@ html {
 <div class="content-wrapper">
   <div class="properties-grid">
     {% for p in properties %}
-    <a href="{% url 'web-property-detail' p.id %}" class="accommodation-card">
+    <a href="{% url 'students-accommodation-detail' university_slug=university.name|slugify property_slug=p.title|slugify %}" class="accommodation-card">
       <div class="accommodation-header">
         <div class="accommodation-avatar">
           {% if p.images.first %}
@@ -716,7 +716,7 @@ html {
     <h5 style="font-weight: 700;">Related accommodations</h5>
     <div class="properties-grid" style="margin-top: 12px;">
       {% for p in related_properties %}
-      <a href="{% url 'web-property-detail' p.id %}" class="accommodation-card">
+      <a href="{% url 'students-accommodation-detail' university_slug=university.name|slugify property_slug=p.title|slugify %}" class="accommodation-card">
         <div class="accommodation-header">
           <div class="accommodation-avatar">
             {% if p.images.first %}

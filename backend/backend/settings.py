@@ -35,6 +35,9 @@ INSTALLED_APPS = [
     "core",
     "web",
     "api",
+
+    # integrations
+    "whatsapp_bot",
 ]
 
 MIDDLEWARE = [

@@ -574,6 +574,9 @@ class UniversitiesScreen(Screen):
         if hasattr(self.ids, 'loading_label'):
             self.ids.loading_label.text = 'Loading...'
             start_pulse(self.ids.loading_label)
+        # Keep the subtitle (web-like) stable if present
+        if hasattr(self.ids, 'subtitle_label'):
+            self.ids.subtitle_label.text = 'Select a university to view available accommodations.'
         # if we previously had a KV load error, show a hint
         if KV_LOAD_ERROR and hasattr(self.ids, 'loading_label'):
             self.ids.loading_label.text += ' (KV loaded with errors, see logs)'
@@ -775,265 +778,411 @@ class PropertyListScreen(Screen):
             btn.color = [1, 0.2, 0.2, 1]
 
     def _create_web_like_property_card(self, prop, index=0):
-        """Build a web-like accommodation card (header/meta, main image, title+price, description).
+        """Build a web-like accommodation card.
 
-        Matches the structure of backend/templates/web/university_properties.html.
+        Mirrors backend/templates/web/university_properties.html (.accommodation-card)
+        as closely as Kivy allows (rounded card, header/meta/like, main image,
+        title+price pill, description + read more, reaction pills).
         """
         from kivy.uix.behaviors import ButtonBehavior
         from kivy.uix.widget import Widget
         from kivy.graphics import Color, RoundedRectangle, Line
+        from kivy.graphics import StencilPush, StencilUse, StencilUnUse, StencilPop
 
         class Card(ButtonBehavior, BoxLayout):
             pass
 
-        w = Window.width
+        w = float(Window.width or 0)
         is_small = w < dp(600)
 
-        # Slightly closer to web proportions (taller media)
-        card_height = dp(332) if is_small else dp(350)
-        media_h = dp(200) if is_small else dp(220)
+        def _fsp(small_sp, large_sp):
+            return sp(small_sp) if is_small else sp(large_sp)
 
-        card = Card(orientation='vertical', size_hint_y=None, height=card_height, padding=0, spacing=0)
+        # Match web clamp(200px, 32vh, 280px)
+        media_h = max(dp(200), min(dp(280), dp((Window.height or 0) * 0.32)))
+
+        def _truncate(text, limit):
+            t = '' if text is None else str(text)
+            if len(t) <= limit:
+                return t
+            return t[: max(0, limit - 3)] + '...'
+
+        def _display_gender(value):
+            mapping = {
+                'all': 'All',
+                'boys': 'Boys only',
+                'girls': 'Girls only',
+                'mixed': 'Mixed Gender',
+            }
+            v = '' if value is None else str(value)
+            return mapping.get(v, v)
+
+        def _display_sharing(value):
+            mapping = {
+                'single': 'Single room',
+                'two': '2 Sharing',
+                'other': 'Other',
+            }
+            v = '' if value is None else str(value)
+            return mapping.get(v, v)
+
+        def _as_money(value):
+            if value in (None, ''):
+                return None
+            try:
+                # Keep integers clean, decimals stable.
+                v = float(value)
+                if v.is_integer():
+                    return str(int(v))
+                return f"{v:.2f}".rstrip('0').rstrip('.')
+            except Exception:
+                return str(value)
+
+        def _make_rounded_media(source, radius_dp, *, height):
+            holder = BoxLayout(size_hint_y=None, height=height)
+            holder.padding = 0
+            holder.spacing = 0
+            holder.cla = None
+
+            with holder.canvas.before:
+                StencilPush()
+                holder.clip_rect = RoundedRectangle(pos=holder.pos, size=holder.size, radius=[dp(radius_dp)])
+                StencilUse()
+
+            img = AsyncImage(source=source)
+            configure_cover_image(img)
+            holder.add_widget(img)
+
+            with holder.canvas.after:
+                StencilUnUse()
+                RoundedRectangle(pos=holder.pos, size=holder.size, radius=[dp(radius_dp)])
+                StencilPop()
+                # web border: #f1ebe2
+                Color(0.945, 0.922, 0.886, 1)
+                holder.bd = Line(rounded_rectangle=[holder.x, holder.y, holder.width, holder.height, dp(radius_dp)], width=1)
+
+            def _sync(_inst, _val):
+                holder.clip_rect.pos = holder.pos
+                holder.clip_rect.size = holder.size
+                if hasattr(holder, 'bd'):
+                    holder.bd.rounded_rectangle = [holder.x, holder.y, holder.width, holder.height, dp(radius_dp)]
+
+            holder.bind(pos=_sync, size=_sync)
+            return holder
+
+        # Card
+        card = Card(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=[dp(16), dp(14), dp(16), dp(16)],
+            spacing=dp(12),
+        )
         card.opacity = 0
 
-        # Card background + border (like web card)
+        # Web colors
+        border_rgba = (0.937, 0.902, 0.851, 1)  # #efe6d9
         with card.canvas.before:
-            Color(0, 0, 0, 0.08)
-            card.shadow_rect = RoundedRectangle(pos=(card.x, card.y - dp(4)), size=card.size, radius=[dp(22)])
             Color(1, 1, 1, 1)
             card.bg_rect = RoundedRectangle(pos=card.pos, size=card.size, radius=[dp(22)])
         with card.canvas.after:
-            # web border: #efe6d9
-            Color(0.937, 0.902, 0.851, 1)
+            Color(*border_rgba)
             card.border_line = Line(rounded_rectangle=[card.x, card.y, card.width, card.height, dp(22)], width=1)
 
-        def _sync(_inst, _val):
-            card.shadow_rect.pos = (card.x, card.y - dp(4))
-            card.shadow_rect.size = card.size
+        def _sync_card(_inst, _val):
             card.bg_rect.pos = card.pos
             card.bg_rect.size = card.size
             card.border_line.rounded_rectangle = [card.x, card.y, card.width, card.height, dp(22)]
 
-        card.bind(pos=_sync, size=_sync)
+        card.bind(pos=_sync_card, size=_sync_card)
 
-        # Header row (avatar + meta + like)
-        header = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(58), padding=[dp(14), dp(10)], spacing=dp(10))
+        # Header
+        header = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(52) if is_small else dp(56),
+            spacing=dp(12),
+        )
 
+        thumb = (prop or {}).get('thumbnail') or ''
         avatar = BoxLayout(size_hint=(None, None), size=(dp(44), dp(44)))
         with avatar.canvas.before:
-            # web avatar: rounded square with border
-            Color(1.0, 0.976, 0.949, 1)
+            # #fff9f2 background + #e0d8c7 border
+            Color(1, 0.976, 0.949, 1)
             avatar.bg = RoundedRectangle(pos=avatar.pos, size=avatar.size, radius=[dp(14)])
             Color(0.878, 0.847, 0.780, 1)
-            avatar.bd = Line(rounded_rectangle=[avatar.x, avatar.y, avatar.width, avatar.height, dp(14)], width=1.2)
+            avatar.bd = Line(rounded_rectangle=[avatar.x, avatar.y, avatar.width, avatar.height, dp(14)], width=2)
         avatar.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
         avatar.bind(size=lambda i, v: setattr(i.bg, 'size', v))
         avatar.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
         avatar.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(14)]))
 
-        thumb = (prop or {}).get('thumbnail') or ''
         if thumb:
-            avatar.add_widget(AsyncImage(source=thumb, fit_mode='contain'))
+            avatar_media = _make_rounded_media(thumb, 14, height=avatar.height)
+            avatar.add_widget(avatar_media)
         else:
-            avatar.add_widget(Label(text='🏠', font_size=sp(18), color=(0.55, 0.55, 0.55, 1), halign='center', valign='middle'))
-            avatar.children[0].bind(size=avatar.children[0].setter('text_size'))
+            ph = Label(text='🏠', font_size=_fsp(16, 18), color=(0.62, 0.58, 0.54, 1), halign='center', valign='middle')
+            ph.bind(size=ph.setter('text_size'))
+            avatar.add_widget(ph)
+
         header.add_widget(avatar)
 
+        # Meta
         meta = BoxLayout(orientation='vertical', spacing=dp(2))
+        meta.size_hint_x = 1
 
-        # Location line (web: location/city/distance)
-        location_text = ''
-        if (prop or {}).get('location'):
-            location_text = str(prop.get('location'))
-        elif (prop or {}).get('city_name'):
-            location_text = str(prop.get('city_name'))
-        elif isinstance((prop or {}).get('city'), str):
-            location_text = str(prop.get('city'))
-        elif (prop or {}).get('distance_km'):
-            try:
-                location_text = f"{round(float(prop.get('distance_km')), 1)} km from campus"
-            except Exception:
-                location_text = "Around campus"
+        location = (prop or {}).get('location')
+        city_name = (prop or {}).get('city_name')
+        distance_km = (prop or {}).get('distance_km')
+        if location:
+            channel_text = str(location)
+        elif city_name:
+            channel_text = str(city_name)
+        elif distance_km not in (None, ''):
+            channel_text = f"{distance_km} km from campus"
         else:
-            location_text = "Around campus"
+            channel_text = 'Around campus'
 
         channel = Label(
-            text=location_text,
-            font_size=sp(12) if is_small else sp(13),
-            color=(0.25, 0.25, 0.25, 1),
-            halign='left',
-            valign='middle',
-        )
-        channel.bind(size=channel.setter('text_size'))
-        meta.add_widget(channel)
-
-        gender = (prop or {}).get('gender_display') or (prop or {}).get('gender') or ''
-        sharing = (prop or {}).get('sharing_display') or (prop or {}).get('sharing') or ''
-        meta_line = ""
-        if gender and sharing:
-            meta_line = f"{gender} · {sharing}"
-        elif gender:
-            meta_line = str(gender)
-        elif sharing:
-            meta_line = str(sharing)
-
-        followers = Label(
-            text=meta_line,
-            font_size=sp(11) if is_small else sp(12),
-            color=(0.45, 0.45, 0.45, 1),
-            halign='left',
-            valign='middle',
-        )
-        followers.bind(size=followers.setter('text_size'))
-        meta.add_widget(followers)
-        header.add_widget(meta)
-
-        like_btn = Button(
-            text='♥' if self.is_liked((prop or {}).get('id')) else '♡',
-            size_hint=(None, None),
-            size=(dp(42), dp(42)),
-            background_normal='',
-            background_color=[1, 1, 1, 1],
-            font_size=sp(20),
-            color=[1, 0.2, 0.2, 1] if self.is_liked((prop or {}).get('id')) else [0.25, 0.25, 0.25, 1],
-        )
-        with like_btn.canvas.before:
-            Color(1, 1, 1, 0.9)
-            like_btn.bg = RoundedRectangle(pos=like_btn.pos, size=like_btn.size, radius=[dp(21)])
-            Color(0.90, 0.90, 0.90, 1)
-            like_btn.bd = Line(rounded_rectangle=[like_btn.x, like_btn.y, like_btn.width, like_btn.height, dp(21)], width=1)
-        like_btn.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
-        like_btn.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(21)])))
-        like_btn.bind(on_release=lambda btn, p=prop: self.toggle_like(p, btn))
-        header.add_widget(Widget())
-        header.add_widget(like_btn)
-
-        card.add_widget(header)
-
-        # Main media
-        media = BoxLayout(size_hint_y=None, height=media_h)
-        img_src = (prop or {}).get('thumbnail') or 'assets/placeholder.png'
-        media_img = AsyncImage(source=img_src)
-        configure_cover_image(media_img)
-        media.add_widget(media_img)
-        card.add_widget(media)
-
-        # Body
-        body = BoxLayout(orientation='vertical', padding=[dp(12), dp(10)], spacing=dp(6))
-
-        title_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(28), spacing=dp(8))
-        title = Label(
-            text=str((prop or {}).get('title') or 'Property'),
-            font_size=sp(14) if is_small else sp(15),
+            text=channel_text,
+            font_size=_fsp(14, 15),
             bold=True,
-            color=(0.13, 0.13, 0.13, 1),
-            halign='left',
-            valign='middle',
-        )
-        # Web-like truncation
-        if hasattr(title, 'shorten'):
-            title.shorten = True
-            title.shorten_from = 'right'
-        title.bind(size=title.setter('text_size'))
-        title_row.add_widget(title)
-
-        # Price pill (🔥 ... /month)
-        ptype = (prop or {}).get('property_type')
-        is_monthly = ptype in ('long_term', 'shop')
-        is_overnight = bool((prop or {}).get('overnight'))
-
-        if is_monthly or (ptype == 'students' and not is_overnight):
-            amount = (prop or {}).get('price_per_month')
-            suffix = '/month'
-        else:
-            amount = (prop or {}).get('nightly_price')
-            suffix = '/night'
-
-        amount_text = str(amount) if amount not in (None, '') else 'N/A'
-        pill = Label(
-            text=f"🔥 ${amount_text} {suffix}",
-            font_size=sp(11) if is_small else sp(12),
-            color=(0.13, 0.13, 0.13, 1),
-            halign='center',
-            valign='middle',
-            size_hint=(None, None),
-            size=(dp(120), dp(26)),
-        )
-        pill.bind(size=pill.setter('text_size'))
-        with pill.canvas.before:
-            Color(1, 0.976, 0.953, 1)  # close to web "reaction-pill" bg
-            pill.bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(13)])
-            Color(1, 0.894, 0.776, 1)
-            pill.bd = Line(rounded_rectangle=[pill.x, pill.y, pill.width, pill.height, dp(13)], width=1)
-        pill.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
-        pill.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
-
-        title_row.add_widget(pill)
-        body.add_widget(title_row)
-
-        desc_text = str((prop or {}).get('description') or '')
-        if len(desc_text) > 110:
-            desc_text = desc_text[:107] + '...'
-        if desc_text:
-            desc = Label(
-                text=desc_text,
-                font_size=sp(12) if is_small else sp(13),
-                color=(0.35, 0.35, 0.35, 1),
-                halign='left',
-                valign='top',
-                size_hint_y=None,
-                height=dp(44),
-            )
-            desc.bind(size=desc.setter('text_size'))
-            body.add_widget(desc)
-
-        read_more = Label(
-            text='Read more',
-            font_size=sp(12),
-            bold=True,
-            color=(0.05, 0.43, 0.99, 1),
+            color=(0.114, 0.114, 0.122, 1),
             halign='left',
             valign='middle',
             size_hint_y=None,
-            height=dp(18),
+            height=dp(20),
+        )
+        if hasattr(channel, 'shorten'):
+            channel.shorten = True
+            channel.shorten_from = 'right'
+        channel.bind(size=channel.setter('text_size'))
+        meta.add_widget(channel)
+
+        gender_disp = (prop or {}).get('gender_display') or _display_gender((prop or {}).get('gender'))
+        sharing_disp = (prop or {}).get('sharing_display') or _display_sharing((prop or {}).get('sharing'))
+        followers_text = " · ".join([t for t in [gender_disp, sharing_disp] if t])
+
+        followers = Label(
+            text=followers_text,
+            font_size=_fsp(11.5, 12.5),
+            color=(0.545, 0.545, 0.561, 1),
+            halign='left',
+            valign='middle',
+            size_hint_y=None,
+            height=dp(16),
+        )
+        if hasattr(followers, 'shorten'):
+            followers.shorten = True
+            followers.shorten_from = 'right'
+        followers.bind(size=followers.setter('text_size'))
+        meta.add_widget(followers)
+
+        header.add_widget(meta)
+
+        # Like button (web: 38x38, circle, ♡ / ♥)
+        like_btn = Button(
+            text='♥' if self.is_liked((prop or {}).get('id')) else '♡',
+            size_hint=(None, None),
+            size=(dp(38), dp(38)),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
+            font_size=_fsp(16, 18),
+            color=[1, 0.353, 0.373, 1] if self.is_liked((prop or {}).get('id')) else [0.25, 0.25, 0.25, 1],
+        )
+        with like_btn.canvas.before:
+            Color(1, 1, 1, 1)
+            like_btn.bg = RoundedRectangle(pos=like_btn.pos, size=like_btn.size, radius=[dp(999)])
+            # subtle border
+            Color(0.93, 0.93, 0.93, 1)
+            like_btn.bd = Line(rounded_rectangle=[like_btn.x, like_btn.y, like_btn.width, like_btn.height, dp(999)], width=1)
+
+        like_btn.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+        like_btn.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+        like_btn.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+        like_btn.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+        like_btn.bind(on_release=lambda btn, p=prop: self.toggle_like(p, btn))
+
+        header.add_widget(like_btn)
+        card.add_widget(header)
+
+        # Main media (rounded 16)
+        img_src = (prop or {}).get('thumbnail') or 'assets/placeholder.png'
+        media = _make_rounded_media(img_src, 16, height=media_h)
+        card.add_widget(media)
+
+        # Body
+        body = BoxLayout(orientation='vertical', spacing=dp(6))
+
+        title_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(28), spacing=dp(10))
+        prop_title = str((prop or {}).get('title') or 'Accommodation')
+        title_lbl = Label(
+            text=prop_title,
+            font_size=_fsp(15, 16),
+            bold=True,
+            color=(0.122, 0.125, 0.137, 1),
+            halign='left',
+            valign='middle',
+        )
+        if hasattr(title_lbl, 'shorten'):
+            title_lbl.shorten = True
+            title_lbl.shorten_from = 'right'
+        title_lbl.bind(size=title_lbl.setter('text_size'))
+        title_row.add_widget(title_lbl)
+
+        overnight = bool((prop or {}).get('overnight'))
+        monthly = _as_money((prop or {}).get('price_per_month'))
+        nightly = _as_money((prop or {}).get('nightly_price'))
+
+        if overnight and nightly is not None:
+            price_text = f"🔥 ${nightly} /night"
+        elif monthly is not None:
+            price_text = f"🔥 ${monthly} /month"
+        else:
+            price_text = "🔥 N/A"
+
+        price_pill = BoxLayout(
+            orientation='horizontal',
+            size_hint=(None, None),
+            height=dp(26),
+            padding=[dp(12), dp(5), dp(12), dp(5)],
+        )
+        price_pill_lbl = Label(
+            text=price_text,
+            font_size=_fsp(11.5, 12.5),
+            bold=True,
+            color=(0.133, 0.133, 0.133, 1),
+            halign='center',
+            valign='middle',
+        )
+        price_pill_lbl.bind(size=price_pill_lbl.setter('text_size'))
+        price_pill.add_widget(price_pill_lbl)
+
+        def _sync_pill(_inst, _val):
+            w = (price_pill_lbl.texture_size[0] or 0) + dp(24)
+            price_pill.width = max(dp(90), min(w, dp(170)))
+            price_pill_lbl.text_size = (price_pill.width - (price_pill.padding[0] + price_pill.padding[2]), None)
+
+        price_pill_lbl.bind(texture_size=_sync_pill)
+        _sync_pill(None, None)
+
+        with price_pill.canvas.before:
+            Color(1, 0.976, 0.953, 1)  # #fff9f3
+            price_pill.bg = RoundedRectangle(pos=price_pill.pos, size=price_pill.size, radius=[dp(999)])
+            Color(1, 0.894, 0.776, 1)  # #ffe4c6
+            price_pill.bd = Line(rounded_rectangle=[price_pill.x, price_pill.y, price_pill.width, price_pill.height, dp(999)], width=1)
+
+        price_pill.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+        price_pill.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+        price_pill.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+        price_pill.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+
+        title_row.add_widget(price_pill)
+        body.add_widget(title_row)
+
+        desc = _truncate((prop or {}).get('description') or '', 110)
+        if desc:
+            desc_lbl = Label(
+                text=desc,
+                font_size=_fsp(12.5, 13.5),
+                color=(0.290, 0.290, 0.310, 1),
+                halign='left',
+                valign='top',
+                size_hint_y=None,
+            )
+            desc_lbl.bind(size=desc_lbl.setter('text_size'))
+
+            def _sync_desc(_inst, _val):
+                desc_lbl.text_size = (body.width, None)
+                # aim for ~3 lines max
+                desc_lbl.height = min(desc_lbl.texture_size[1] or dp(20), dp(66) if is_small else dp(74))
+
+            desc_lbl.bind(texture_size=_sync_desc)
+            body.bind(size=_sync_desc)
+            body.add_widget(desc_lbl)
+
+        read_more = Label(
+            text='Read more',
+            font_size=_fsp(11.5, 12.5),
+            bold=True,
+            color=(0.051, 0.431, 0.992, 1),  # #0d6efd
+            halign='left',
+            valign='middle',
+            size_hint_y=None,
+            height=dp(16),
         )
         read_more.bind(size=read_more.setter('text_size'))
         body.add_widget(read_more)
 
-        # Reaction pills row (mobile-only vibe)
-        pills = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(8))
+        # Reactions (web: sharing + max occupancy)
+        reactions = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30), spacing=dp(8))
+        pill_count = 0
+
         def _pill(text):
-            l = Label(
+            pill = BoxLayout(
+                orientation='horizontal',
+                size_hint=(None, None),
+                height=dp(28),
+                padding=[dp(12), dp(5), dp(12), dp(5)],
+            )
+            lbl = Label(
                 text=text,
-                font_size=sp(11),
-                color=(0.13, 0.13, 0.13, 1),
+                font_size=_fsp(11.5, 12.5),
+                bold=True,
+                color=(0.133, 0.133, 0.133, 1),
                 halign='center',
                 valign='middle',
-                size_hint=(None, None),
-                size=(dp(95), dp(26)),
             )
-            l.bind(size=l.setter('text_size'))
-            with l.canvas.before:
-                Color(1, 0.976, 0.953, 1)
-                l.bg = RoundedRectangle(pos=l.pos, size=l.size, radius=[dp(13)])
-                Color(1, 0.894, 0.776, 1)
-                l.bd = Line(rounded_rectangle=[l.x, l.y, l.width, l.height, dp(13)], width=1)
-            l.bind(pos=lambda i, _v: (setattr(i.bg, 'pos', i.pos), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
-            l.bind(size=lambda i, _v: (setattr(i.bg, 'size', i.size), setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(13)])))
-            return l
+            lbl.bind(size=lbl.setter('text_size'))
+            pill.add_widget(lbl)
 
-        any_pill = False
-        if sharing:
-            pills.add_widget(_pill('👍 ' + str(sharing)))
-            any_pill = True
+            def _sync(_inst, _val):
+                w = (lbl.texture_size[0] or 0) + dp(24)
+                pill.width = max(dp(92), min(w, dp(190)))
+                lbl.text_size = (pill.width - (pill.padding[0] + pill.padding[2]), None)
+
+            lbl.bind(texture_size=_sync)
+            _sync(None, None)
+
+            with pill.canvas.before:
+                Color(1, 0.976, 0.953, 1)
+                pill.bg = RoundedRectangle(pos=pill.pos, size=pill.size, radius=[dp(999)])
+                Color(1, 0.894, 0.776, 1)
+                pill.bd = Line(rounded_rectangle=[pill.x, pill.y, pill.width, pill.height, dp(999)], width=1)
+            pill.bind(pos=lambda i, v: setattr(i.bg, 'pos', v))
+            pill.bind(size=lambda i, v: setattr(i.bg, 'size', v))
+            pill.bind(pos=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+            pill.bind(size=lambda i, _v: setattr(i.bd, 'rounded_rectangle', [i.x, i.y, i.width, i.height, dp(999)]))
+            return pill
+
+        if sharing_disp:
+            reactions.add_widget(_pill(f"👍 {sharing_disp}"))
+            pill_count += 1
+
         max_occ = (prop or {}).get('max_occupancy')
         if max_occ not in (None, ''):
-            pills.add_widget(_pill(f"❤️ {max_occ} max"))
-            any_pill = True
-        if any_pill:
-            body.add_widget(pills)
+            reactions.add_widget(_pill(f"❤️ {max_occ} max"))
+            pill_count += 1
+
+        if pill_count:
+            reactions.add_widget(Widget())
+            body.add_widget(reactions)
 
         card.add_widget(body)
+
+        # Final height based on content
+        card.height = (
+            card.padding[1]
+            + header.height
+            + card.spacing
+            + media.height
+            + card.spacing
+            + title_row.height
+            + dp(6)
+            + (dp(66) if desc else 0)
+            + dp(16)
+            + (reactions.height if max_occ not in (None, '') or sharing_disp else 0)
+            + card.padding[3]
+        )
 
         def _open(_):
             det = self.manager.get_screen('property_detail')
@@ -1327,17 +1476,17 @@ class PropertyDetailScreen(Screen):
         nightly = result.get('nightly_price')
 
         bedrooms = result.get('bedrooms')
-        max_occ = result.get('max_occupancy')
         gender = result.get('gender_display') or result.get('gender')
         sharing = result.get('sharing_display') or result.get('sharing')
         overnight = result.get('overnight')
+        square_meters = result.get('square_meters')
 
         # New UI: meta list
         if hasattr(self.ids, 'prop_meta_items'):
             container = self.ids.prop_meta_items
             container.clear_widgets()
 
-            # Web detail shows a compact "Amenities" summary line.
+            # Match web detail: "Gender · Sharing · Overnight available · Bedrooms · m²"
             summary_parts = []
             if gender:
                 summary_parts.append(str(gender))
@@ -1347,15 +1496,10 @@ class PropertyDetailScreen(Screen):
                 summary_parts.append('Overnight available')
             if bedrooms not in (None, ''):
                 summary_parts.append(f"{bedrooms} Bedroom" + ("s" if str(bedrooms) != '1' else ""))
+            if square_meters not in (None, ''):
+                summary_parts.append(f"{square_meters} m²")
             if summary_parts:
-                self._add_meta_row(container, "✨ " + " · ".join(summary_parts))
-
-            if max_occ:
-                self._add_meta_row(container, f"👥 Max occupancy: {max_occ}")
-
-            # Keep a couple of extra details if provided
-            if bedrooms not in (None, ''):
-                self._add_meta_row(container, f"🛏️ Bedrooms: {bedrooms}")
+                self._add_meta_row(container, " · ".join(summary_parts))
 
         # Old UI compatibility: single meta label
         if hasattr(self.ids, 'prop_meta'):
@@ -1416,28 +1560,58 @@ class PropertyDetailScreen(Screen):
         city = result.get('city_name') or result.get('city')
         university = result.get('university_name') or result.get('university')
 
+        # Payment/visibility hints (web uses has_paid to control "Limited")
+        has_paid = result.get('has_paid')
+        if has_paid is None:
+            has_paid = result.get('admin_fee_paid')
+        if has_paid is None:
+            has_paid = result.get('has_paid_admin_fee')
+
         self._map_lat = lat
         self._map_lng = lng
         self._map_query = location or city or university
 
         # Web-style "Limited" badge when precise location isn't available.
-        if hasattr(self.ids, 'map_limited_badge'):
+        if isinstance(has_paid, bool):
+            limited = not has_paid
+        else:
             limited = (lat is None or lng is None) and not location
+
+        if hasattr(self.ids, 'map_limited_badge'):
             self.ids.map_limited_badge.opacity = 1 if limited else 0
+        if hasattr(self.ids, 'map_limited_badge_desktop'):
+            self.ids.map_limited_badge_desktop.opacity = 1 if limited else 0
 
-        if not hasattr(self.ids, 'map_info'):
-            return
-
-        parts = []
-        if location:
-            parts.append(location)
-        if city:
-            parts.append(city)
-        if university:
-            parts.append(f"Near {university}")
+        # Embedded map preview (static image) to match the web's map block.
+        map_url = ''
         if lat is not None and lng is not None:
-            parts.append(f"Coordinates: {lat}, {lng}")
-        self.ids.map_info.text = "\n".join(parts) if parts else "Location details not available."
+            try:
+                map_url = (
+                    'https://staticmap.openstreetmap.de/staticmap.php'
+                    f'?center={lat},{lng}&zoom=15&size=800x400&markers={lat},{lng},red-pushpin'
+                )
+            except Exception:
+                map_url = ''
+
+        for img_id in ('map_image', 'map_image_desktop'):
+            if hasattr(self.ids, img_id):
+                self.ids[img_id].source = map_url
+                try:
+                    self.ids[img_id].reload()
+                except Exception:
+                    pass
+
+        placeholder_text = '' if map_url else 'Map preview unavailable'
+        for ph_id in ('map_placeholder', 'map_placeholder_desktop'):
+            if hasattr(self.ids, ph_id):
+                self.ids[ph_id].text = placeholder_text
+
+        # Match web wording closely
+        text_value = str(location) if location else 'Location available after admin fee payment'
+        if hasattr(self.ids, 'map_info'):
+            self.ids.map_info.text = text_value
+        if hasattr(self.ids, 'map_info_desktop'):
+            self.ids.map_info_desktop.text = text_value
 
     def _populate_gallery(self, imgs):
         if not hasattr(self.ids, 'gallery_container'):
@@ -1500,10 +1674,6 @@ class PropertyDetailScreen(Screen):
         container.clear_widgets()
 
         amenities = self._normalize_amenities(result.get('amenities'))
-        square_meters = result.get('square_meters')
-        if square_meters:
-            amenities.insert(0, f"📐 {square_meters} m²")
-
         if not amenities:
             container.add_widget(Label(
                 text='No amenities listed.',
@@ -1850,8 +2020,8 @@ class PropertyContactScreen(Screen):
         self.current_property = prop_data
         self.property_id = prop_id
         
-        if hasattr(self.ids, 'contact_title'):
-            self.ids.contact_title.text = f"Contact: {prop_data.get('title', 'Property')}"
+        if hasattr(self.ids, 'contact_property_name'):
+            self.ids.contact_property_name.text = str(prop_data.get('title', ''))
         
         # Try to get contact info
         import json
@@ -1867,6 +2037,84 @@ class PropertyContactScreen(Screen):
             req_headers=headers,
             method='POST'
         )
+
+    def _panel(self, bg_rgba, radius_dp=12, border_rgba=None, border_width=1, left_bar_rgba=None):
+        panel = BoxLayout(
+            orientation='vertical',
+            padding=[dp(14), dp(12)],
+            spacing=dp(10),
+            size_hint_y=None,
+        )
+        panel.bind(minimum_height=panel.setter('height'))
+
+        from kivy.graphics import Color, RoundedRectangle, Line, Rectangle
+        with panel.canvas.before:
+            Color(*bg_rgba)
+            panel._bg = RoundedRectangle(pos=panel.pos, size=panel.size, radius=[dp(radius_dp)])
+            if left_bar_rgba is not None:
+                Color(*left_bar_rgba)
+                panel._left = Rectangle(pos=(panel.x, panel.y), size=(dp(4), panel.height))
+            if border_rgba is not None:
+                Color(*border_rgba)
+                panel._border = Line(width=border_width, rounded_rectangle=(panel.x, panel.y, panel.width, panel.height, dp(radius_dp)))
+
+        def _sync(_inst, _val):
+            panel._bg.pos = panel.pos
+            panel._bg.size = panel.size
+            if hasattr(panel, '_border'):
+                panel._border.rounded_rectangle = (panel.x, panel.y, panel.width, panel.height, dp(radius_dp))
+            if hasattr(panel, '_left'):
+                panel._left.pos = (panel.x, panel.y)
+                panel._left.size = (dp(4), panel.height)
+
+        panel.bind(pos=_sync, size=_sync)
+        return panel
+
+    def _contact_detail_row(self, icon_text, label_text, value_text):
+        row = BoxLayout(orientation='horizontal', spacing=dp(12), size_hint_y=None)
+        row.bind(minimum_height=row.setter('height'))
+
+        from kivy.graphics import Color, RoundedRectangle, Line
+        with row.canvas.before:
+            Color(1, 1, 1, 1)
+            row._bg = RoundedRectangle(pos=row.pos, size=row.size, radius=[dp(10)])
+            Color(0, 0, 0, 0.08)
+            row._border = Line(width=1, rounded_rectangle=(row.x, row.y, row.width, row.height, dp(10)))
+
+        def _sync(_inst, _val):
+            row._bg.pos = row.pos
+            row._bg.size = row.size
+            row._border.rounded_rectangle = (row.x, row.y, row.width, row.height, dp(10))
+
+        row.bind(pos=_sync, size=_sync)
+
+        icon = Label(text=icon_text, font_size=sp(26), size_hint=(None, None), size=(dp(34), dp(34)), color=(0.13, 0.13, 0.13, 1), halign='center', valign='middle')
+        icon.bind(size=icon.setter('text_size'))
+        row.add_widget(icon)
+
+        info = BoxLayout(orientation='vertical', spacing=dp(2))
+        lbl = Label(text=str(label_text).upper(), font_size=sp(11), color=(0.4, 0.4, 0.4, 1), size_hint_y=None, height=dp(14), halign='left', valign='middle')
+        lbl.bind(size=lbl.setter('text_size'))
+        val = Label(text=str(value_text) if value_text else 'Not provided', bold=True, font_size=sp(15), color=(0.13, 0.13, 0.13, 1), size_hint_y=None, height=dp(20), halign='left', valign='middle')
+        val.bind(size=val.setter('text_size'))
+        info.add_widget(lbl)
+        info.add_widget(val)
+        row.add_widget(info)
+
+        row.height = dp(56)
+        row.padding = [dp(12), dp(10)]
+        return row
+
+    def _static_map_url(self, lat, lng):
+        if lat is None or lng is None:
+            return ''
+        try:
+            return (
+                'https://staticmap.openstreetmap.de/staticmap.php'
+                f'?center={lat},{lng}&zoom=15&size=800x400&markers={lat},{lng},red-pushpin'
+            )
+        except Exception:
+            return ''
     
     def on_contact_success(self, req, result):
         """Handle successful contact retrieval"""
@@ -1894,135 +2142,270 @@ class PropertyContactScreen(Screen):
                     self.show_payment_form(self.ids.contact_container, result)
             except:
                 pass
+        # 403 means user has an approved payment but has exhausted uses
+        elif hasattr(req, 'resp_status') and req.resp_status == 403:
+            if hasattr(self.ids, 'contact_container'):
+                container = self.ids.contact_container
+                container.clear_widgets()
+
+                detail = None
+                try:
+                    if isinstance(error, dict):
+                        detail = error.get('detail')
+                except Exception:
+                    detail = None
+                if not detail:
+                    try:
+                        import json
+                        parsed = json.loads(req.result)
+                        if isinstance(parsed, dict):
+                            detail = parsed.get('detail')
+                    except Exception:
+                        detail = None
+                if not detail:
+                    detail = 'No remaining uses on your approved payment. Please pay again.'
+
+                warn = self._panel(bg_rgba=(1, 0.95, 0.82, 1), radius_dp=12, left_bar_rgba=(1, 0.76, 0.15, 1))
+                warn_title = Label(
+                    text='⚠️ Views exhausted',
+                    bold=True,
+                    font_size=sp(13),
+                    color=(0.52, 0.36, 0.0, 1),
+                    halign='left',
+                    valign='middle',
+                    size_hint_y=None,
+                    height=dp(18),
+                )
+                warn_title.bind(size=warn_title.setter('text_size'))
+                warn.add_widget(warn_title)
+
+                warn_msg = Label(
+                    text=str(detail),
+                    font_size=sp(12),
+                    color=(0.52, 0.36, 0.0, 1),
+                    halign='left',
+                    valign='top',
+                    size_hint_y=None,
+                )
+                warn_msg.bind(size=warn_msg.setter('text_size'))
+                warn_msg.bind(texture_size=lambda i, v: setattr(i, 'height', v[1] + dp(6)))
+                warn.add_widget(warn_msg)
+
+                container.add_widget(warn)
+
+                # Show the payment form so the user can pay again to unlock more views.
+                self.show_payment_form(container, {}, clear=False)
         else:
             if hasattr(self.ids, 'contact_container'):
                 container = self.ids.contact_container
                 container.clear_widgets()
-                container.add_widget(Label(
+                alert = self._panel(bg_rgba=(1, 0.95, 0.95, 1), radius_dp=12, left_bar_rgba=(0.86, 0.15, 0.15, 1))
+                msg = Label(
                     text='Please login to view contact details',
-                    color=(0.8, 0, 0, 1)
-                ))
+                    color=(0.45, 0.1, 0.1, 1),
+                    font_size=sp(13),
+                    bold=True,
+                    halign='left',
+                    valign='middle',
+                    size_hint_y=None,
+                    height=dp(18),
+                )
+                msg.bind(size=msg.setter('text_size'))
+                alert.add_widget(msg)
+                container.add_widget(alert)
     
     def show_contact_details(self, container, data):
         """Display landlord contact details"""
         container.clear_widgets()
-        
-        success_label = Label(
-            text='✓ Contact Details Unlocked',
-            color=(0, 0.6, 0, 1),
-            font_size='16sp',
+
+        # Web-like approved info box
+        approved = self._panel(bg_rgba=(0.83, 0.93, 0.85, 1), radius_dp=12, left_bar_rgba=(0.16, 0.65, 0.31, 1))
+        approved.add_widget(Label(
+            text='✓ Admin fee payment approved',
+            color=(0.08, 0.35, 0.18, 1),
+            bold=True,
+            font_size=sp(13),
+            halign='left',
+            valign='middle',
             size_hint_y=None,
-            height=dp(40),
-            bold=True
-        )
-        container.add_widget(success_label)
-        
-        details_box = BoxLayout(
-            orientation='vertical',
-            padding=[dp(15), dp(12)],
-            spacing=dp(10),
-            size_hint_y=None,
-            height=dp(200)
-        )
-        
-        from kivy.graphics import Color, RoundedRectangle
-        with details_box.canvas.before:
-            Color(0.9, 0.95, 1.0, 1)
-            details_box.bg_rect = RoundedRectangle(pos=details_box.pos, size=details_box.size, radius=[dp(8)])
-        details_box.bind(pos=lambda w, v: setattr(w.bg_rect, 'pos', v))
-        details_box.bind(size=lambda w, v: setattr(w.bg_rect, 'size', v))
-        
-        # Contact details
-        contact_info = [
-            f"📍 House: {data.get('house_number', 'N/A')}",
-            f"📞 Phone: {data.get('contact_phone', 'N/A')}",
-            f"👨‍💼 Caretaker: {data.get('caretaker_number', 'N/A')}",
-        ]
-        
-        for info in contact_info:
-            label = Label(
-                text=info,
-                color=(0, 0, 0, 1),
-                font_size='14sp',
+            height=dp(18),
+        ))
+        container.add_widget(approved)
+
+        # Contact detail rows
+        phone = data.get('contact_phone')
+        house = data.get('house_number')
+        caretaker = data.get('caretaker_number')
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+        address = None
+        try:
+            address = (self.current_property or {}).get('location') or (self.current_property or {}).get('address')
+        except Exception:
+            address = None
+
+        container.add_widget(self._contact_detail_row('📱', 'Phone Number', phone))
+        container.add_widget(self._contact_detail_row('🏠', 'House Number', house))
+        container.add_widget(self._contact_detail_row('👤', 'Caretaker', caretaker))
+        if address:
+            container.add_widget(self._contact_detail_row('📍', 'Full Address', address))
+        if lat is not None and lng is not None:
+            container.add_widget(self._contact_detail_row('🗺️', 'Coordinates', f"{lat}, {lng}"))
+
+            # Map preview block (web has embedded map)
+            map_wrap = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(240))
+            from kivy.graphics import Color, RoundedRectangle
+            with map_wrap.canvas.before:
+                Color(0.91, 0.91, 0.91, 1)
+                map_wrap._bg = RoundedRectangle(pos=map_wrap.pos, size=map_wrap.size, radius=[dp(12)])
+            map_wrap.bind(pos=lambda w, v: setattr(w._bg, 'pos', v))
+            map_wrap.bind(size=lambda w, v: setattr(w._bg, 'size', v))
+
+            map_img = AsyncImage(source=self._static_map_url(lat, lng), allow_stretch=True, keep_ratio=False)
+            map_wrap.add_widget(map_img)
+            container.add_widget(map_wrap)
+
+            open_btn = Button(
+                text='Open in Google Maps',
                 size_hint_y=None,
-                height=dp(30),
-                halign='left',
-                valign='middle'
+                height=dp(36),
+                background_normal='',
+                background_color=(0, 0, 0, 0),
+                color=(0.05, 0.43, 0.99, 1),
+                bold=True,
             )
-            label.bind(size=label.setter('text_size'))
-            details_box.add_widget(label)
-        
-        container.add_widget(details_box)
+            open_btn.bind(on_release=lambda *_: self.open_maps())
+            container.add_widget(open_btn)
     
-    def show_payment_form(self, container, data):
+    def show_payment_form(self, container, data, clear: bool = True):
         """Display payment form"""
-        container.clear_widgets()
-        
-        title_label = Label(
-            text='🔒 Payment Required',
-            color=(0, 0, 0, 1),
-            font_size='18sp',
+        if clear:
+            container.clear_widgets()
+
+        pay = self._panel(bg_rgba=(1, 0.95, 0.82, 1), radius_dp=12)
+
+        icon = Label(text='🔒', font_size=sp(46), size_hint_y=None, height=dp(52), halign='center', valign='middle', text_size=(0, 0), color=(0.13, 0.13, 0.13, 1))
+        pay.add_widget(icon)
+
+        pay.add_widget(Label(
+            text='Payment Required',
+            bold=True,
+            font_size=sp(18),
+            color=(0.13, 0.13, 0.13, 1),
+            halign='center',
+            valign='middle',
             size_hint_y=None,
-            height=dp(40),
-            bold=True
-        )
-        container.add_widget(title_label)
-        
-        info_label = Label(
+            height=dp(24),
+        ))
+
+        hint = Label(
             text='Pay the admin fee to unlock contact details',
-            color=(0.3, 0.3, 0.3, 1),
-            font_size='13sp',
+            font_size=sp(13),
+            color=(0.35, 0.35, 0.35, 1),
+            halign='center',
+            valign='middle',
             size_hint_y=None,
-            height=dp(30)
+            height=dp(18),
         )
-        container.add_widget(info_label)
+        hint.bind(size=hint.setter('text_size'))
+        pay.add_widget(hint)
+
+        # Students input + calculate (web-like)
+        students_row = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(44))
+        students_lbl = Label(text='Students', size_hint_x=None, width=dp(80), color=(0.2, 0.2, 0.2, 1), bold=True, halign='left', valign='middle')
+        students_lbl.bind(size=students_lbl.setter('text_size'))
+        from kivy.uix.textinput import TextInput
+        students_input = TextInput(text='1', multiline=False, input_filter='int')
+        calc_btn = Button(
+            text='Calculate',
+            size_hint_x=None,
+            width=dp(120),
+            background_normal='',
+            background_color=(1, 0.84, 0, 1),
+            color=(0, 0, 0, 1),
+            bold=True,
+        )
+        calc_btn.bind(on_release=lambda *_: self.recalculate_admin_fee(students_input.text))
+        students_row.add_widget(students_lbl)
+        students_row.add_widget(students_input)
+        students_row.add_widget(calc_btn)
+        pay.add_widget(students_row)
         
         # Payment instructions if available
         payment_instructions = data.get('payment_instructions', {})
         if payment_instructions:
             amount = payment_instructions.get('amount', 0)
-            
-            amount_label = Label(
-                text=f"Amount: ${amount}",
-                color=(0, 0, 0, 1),
-                font_size='20sp',
+
+            amt = Label(
+                text=f"${amount}",
+                bold=True,
+                font_size=sp(24),
+                color=(0.13, 0.13, 0.13, 1),
+                halign='center',
+                valign='middle',
                 size_hint_y=None,
-                height=dp(40),
-                bold=True
+                height=dp(30),
             )
-            container.add_widget(amount_label)
-            
-            instructions_label = Label(
-                text=payment_instructions.get('instructions', ''),
-                color=(0.3, 0.3, 0.3, 1),
-                font_size='12sp',
-                size_hint_y=None,
-                height=dp(80),
+            pay.add_widget(amt)
+
+            instructions = Label(
+                text=str(payment_instructions.get('instructions', '')).strip(),
+                font_size=sp(12),
+                color=(0.35, 0.35, 0.35, 1),
                 halign='left',
-                valign='top'
+                valign='top',
+                size_hint_y=None,
             )
-            instructions_label.bind(size=instructions_label.setter('text_size'))
-            container.add_widget(instructions_label)
-            
-            # Confirmation text input
-            from kivy.uix.textinput import TextInput
+            instructions.bind(size=instructions.setter('text_size'))
+            instructions.bind(texture_size=lambda i, v: setattr(i, 'height', v[1] + dp(6)))
+            pay.add_widget(instructions)
+
             confirmation_input = TextInput(
-                hint_text='Paste payment confirmation here',
+                hint_text='Paste your payment confirmation message here...',
                 multiline=True,
                 size_hint_y=None,
-                height=dp(100)
+                height=dp(110),
             )
-            container.add_widget(confirmation_input)
-            
-            # Submit button
+            pay.add_widget(confirmation_input)
+
             submit_btn = Button(
                 text='Submit Payment Confirmation',
                 size_hint_y=None,
-                height=dp(45),
-                background_color=(0, 0.4, 0.8, 1)
+                height=dp(46),
+                background_normal='',
+                background_color=(1, 0.84, 0, 1),
+                color=(0, 0, 0, 1),
+                bold=True,
             )
-            submit_btn.bind(on_release=lambda _: self.submit_payment(confirmation_input.text))
-            container.add_widget(submit_btn)
+            submit_btn.bind(on_release=lambda *_: self.submit_payment(confirmation_input.text))
+            pay.add_widget(submit_btn)
+
+        container.add_widget(pay)
+
+    def recalculate_admin_fee(self, students_text):
+        """Re-request /contact/ with a students count to compute amount (web-like)."""
+        if not getattr(self, 'property_id', None):
+            return
+        try:
+            students = int(str(students_text).strip() or '1')
+        except Exception:
+            students = 1
+        if students < 1:
+            students = 1
+
+        import json
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps({'students': students})
+
+        UrlRequest(
+            f"{API_BASE}properties/{self.property_id}/contact/",
+            on_success=self.on_contact_success,
+            on_error=self.on_contact_error,
+            on_failure=self.on_contact_error,
+            req_body=body,
+            req_headers=headers,
+            method='POST',
+        )
     
     def submit_payment(self, confirmation_text):
         """Submit payment confirmation"""
@@ -2059,15 +2442,32 @@ class PropertyContactScreen(Screen):
         if hasattr(self.ids, 'contact_container'):
             container = self.ids.contact_container
             container.clear_widgets()
-            
-            success_label = Label(
-                text='✓ Payment Submitted!\\n\\nYour payment is pending approval.\\nYou will be notified once approved.',
-                color=(0, 0.6, 0, 1),
-                font_size='15sp',
-                halign='center'
+
+            pending = self._panel(bg_rgba=(1, 0.95, 0.82, 1), radius_dp=12, left_bar_rgba=(1, 0.76, 0.15, 1))
+            title = Label(
+                text='⏳ Payment Confirmation Status: Pending',
+                bold=True,
+                font_size=sp(14),
+                color=(0.52, 0.36, 0.0, 1),
+                halign='left',
+                valign='middle',
+                size_hint_y=None,
+                height=dp(20),
             )
-            success_label.bind(size=success_label.setter('text_size'))
-            container.add_widget(success_label)
+            title.bind(size=title.setter('text_size'))
+            pending.add_widget(title)
+            msg = Label(
+                text='Your payment confirmation has been submitted and is awaiting admin approval. You will be able to view landlord contact details once approved.',
+                font_size=sp(12),
+                color=(0.52, 0.36, 0.0, 1),
+                halign='left',
+                valign='top',
+                size_hint_y=None,
+            )
+            msg.bind(size=msg.setter('text_size'))
+            msg.bind(texture_size=lambda i, v: setattr(i, 'height', v[1] + dp(6)))
+            pending.add_widget(msg)
+            container.add_widget(pending)
     
     def on_payment_error(self, req, error):
         """Handle payment submission error"""

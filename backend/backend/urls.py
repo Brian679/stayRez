@@ -12,10 +12,11 @@ urlpatterns = [
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="django-sitemap"),
     path("robots.txt", web_views.robots_txt, name="robots-txt"),
     path("api/", include("api.urls")),
+    path("whatsapp/", include("whatsapp_bot.urls")),
     # Public web site at root
     path("", include("web.urls")),
     # Dashboard routes (kept for backward-compatibility)
-    path("dashboard/", include("web.urls")),
+    path("dashboard/", include(("web.urls", "web"), namespace="dashboard")),
 ]
 
 if settings.DEBUG:
