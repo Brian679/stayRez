@@ -213,7 +213,8 @@ def service_entry(request, service_slug):
     if property_type == 'long_term':
         return longterm_cities(request, service_slug=service_slug)
     if property_type == 'short_term':
-        return shortterm_cities(request, service_slug=service_slug)
+        # For short-term, show curated lodge grid directly
+        return shortterm_lodges(request, service_slug=service_slug)
     if property_type == 'real_estate':
         return realestate_cities(request, service_slug=service_slug)
     if property_type == 'resort':
