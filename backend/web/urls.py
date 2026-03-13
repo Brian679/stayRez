@@ -17,6 +17,7 @@ urlpatterns = [
     path("longterm/", views.longterm_cities, name="longterm-cities"),
     path("longterm/properties/", views.longterm_properties, name="longterm-properties"),
     path("shortterm/", views.shortterm_cities, name="shortterm-cities"),
+    path("shortterm/lodges/", views.shortterm_lodges, name="shortterm-lodges"),
     path("shortterm/properties/", views.shortterm_properties, name="shortterm-properties"),
     path("realestate/", views.realestate_cities, name="realestate-cities"),
     path("realestate/properties/", views.realestate_properties, name="realestate-properties"),

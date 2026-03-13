@@ -131,3 +131,19 @@ class Review(models.Model):
 
     def __str__(self):
         return f"Review by {self.user} - {self.rating}"
+
+
+class ShortTermLodge(models.Model):
+    """Curated short-term lodge websites shown inside an iframe preview."""
+    name = models.CharField(max_length=200)
+    url = models.URLField(max_length=1000)
+    thumb_url = models.CharField(max_length=1000, blank=True, help_text="Optional thumbnail URL or static path")
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Short-term Lodges | offRez{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Short-term Lodges</h2>
+    <p class="text-muted">Click a lodge to preview its site inside our page.</p>
+  </div>
+
+  <div class="row">
+    <div class="col-md-4">
+      <div class="list-group" id="lodges-list">
+        {% for lodge in lodges %}
+        <a href="#" class="list-group-item list-group-item-action lodge-item" data-url="{{ lodge.url }}">
+          <div class="d-flex w-100 align-items-center">
+            <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" style="width:64px;height:48px;object-fit:cover;margin-right:12px;border-radius:6px;">
+            <div>
+              <div style="font-weight:600">{{ lodge.name }}</div>
+              <div class="text-muted small">{{ lodge.url }}</div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-body p-2" style="height:520px;">
+          <iframe id="lodge-frame" src="about:blank" frameborder="0" style="width:100%;height:100%;"></iframe>
+        </div>
+      </div>
+      <div class="text-muted small mt-2">Note: Some external sites may prevent embedding (X-Frame-Options). If a site refuses to load, open it in a new tab.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const items = document.querySelectorAll('.lodge-item');
+    const iframe = document.getElementById('lodge-frame');
+    items.forEach(it => {
+      it.addEventListener('click', function (e) {
+        e.preventDefault();
+        const url = this.dataset.url;
+        // For safety, ensure url is https:// or http://
+        if (!/^https?:\/\//i.test(url)) return;
+        iframe.src = url;
+        // mark active
+        items.forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+    // Auto-load first
+    if (items.length > 0) items[0].click();
+  });
+</script>
+
+{% endblock %}

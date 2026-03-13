@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import University, City, Property, PropertyImage, Review, Service
+from .models import ShortTermLodge
 
 
 @admin.register(Service)
@@ -42,3 +43,11 @@ class PropertyAdmin(admin.ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ("property", "user", "rating", "created_at")
+
+
+@admin.register(ShortTermLodge)
+class ShortTermLodgeAdmin(admin.ModelAdmin):
+    list_display = ("name", "url", "is_active", "order", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "url")
+    list_editable = ("is_active", "order")

@@ -1306,6 +1306,27 @@ def shortterm_properties(request, service_slug=None):
     })
 
 
+def shortterm_lodges(request, service_slug=None):
+    """Show curated list of short-term lodge websites embedded via iframe."""
+    try:
+        from properties.models import ShortTermLodge
+        lodges_qs = ShortTermLodge.objects.filter(is_active=True).order_by('order')
+        lodges = []
+        for l in lodges_qs:
+            lodges.append({
+                'name': l.name,
+                'url': l.url,
+                'thumb': l.thumb_url or '/static/images/shortterm.jpg',
+            })
+    except Exception:
+        # Fallback to a minimal static list if model isn't migrated yet
+        lodges = [
+            {"name": "Example Lodge A", "url": "https://example.com", "thumb": "/static/images/shortterm.jpg"},
+        ]
+
+    return render(request, "web/shortterm_lodges.html", {"lodges": lodges, "service_slug": service_slug})
+
+
 @login_required
 def change_password(request):
     if request.method == 'POST':

@@ -809,6 +809,45 @@
                         size_hint_y: None
                         height: self.minimum_height
 
+                        # Payment Info Box (Web: #fff8e1 with border)
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            padding: [dp(12), dp(12)]
+                            spacing: dp(4)
+                            canvas.before:
+                                Color:
+                                    rgba: 1, 0.97, 0.88, 1
+                                RoundedRectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                    radius: [dp(8),]
+                                Color:
+                                    rgba: 1, 0.92, 0.65, 1
+                                Line:
+                                    width: 1
+                                    rounded_rectangle: (self.x, self.y, self.width, self.height, dp(8))
+                            Label:
+                                text: '⚠️ Payment Information'
+                                font_size: sp(14)
+                                bold: True
+                                color: 0.6, 0.5, 0, 1
+                                size_hint_y: None
+                                height: dp(20)
+                                halign: 'left'
+                                valign: 'middle'
+                                text_size: self.size
+                            Label:
+                                text: 'Never transfer money without viewing the property first.'
+                                font_size: sp(13)
+                                color: 0.45, 0.40, 0, 1
+                                size_hint_y: None
+                                height: self.texture_size[1] + dp(4)
+                                halign: 'left'
+                                valign: 'top'
+                                text_size: self.width, None
+
                         BoxLayout:
                             id: contact_container
                             orientation: 'vertical'

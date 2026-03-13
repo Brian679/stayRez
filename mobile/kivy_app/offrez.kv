@@ -452,127 +452,143 @@
         ScrollView:
             GridLayout:
                 id: props_container
-                # Responsive listing: small -> 1 col, medium -> 2 cols, large -> 3 cols
-                cols: 1 if root.width < dp(600) else (2 if root.width < dp(900) else 3)
+                # Responsive listing: small -> 1 col, large -> 2 cols, extra-large -> 3 cols
+                cols: 1 if root.width < dp(600) else (2 if root.width < dp(1100) else 3)
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(18) if root.width < dp(768) else dp(24)
                 padding: [dp(8) if root.width < dp(768) else dp(16), dp(10), dp(8) if root.width < dp(768) else dp(16), dp(120)]
         
-        # Fixed Bottom Filter Panel (evenly distributed, better design)
-        BoxLayout:
+        # Fixed Bottom Filter Panel (scrollable for mobile like web)
+        ScrollView:
             size_hint_y: None
-            height: self.parent.height * 0.1 if self.parent else dp(70)
-            padding: [dp(12), dp(8)]
-            spacing: dp(10)
-            canvas.before:
-                Color:
-                    rgba: 1, 1, 1, 1
-                Rectangle:
-                    pos: self.pos
-                    size: self.size
-                Color:
-                    rgba: 0, 0, 0, 0.08
-                Rectangle:
-                    pos: [self.x, self.top - dp(4)]
-                    size: [self.width, dp(4)]
+            height: dp(60)
+            do_scroll_y: False
+            do_scroll_x: True
+            bar_width: 0
             
-            # Evenly distributed filter buttons
-            Button:
-                id: filter_all
-                text: 'All'
-                background_normal: ''
-                background_color: 0, 0, 0, 0
-                color: 1, 1, 1, 1
-                font_size: sp(13)
-                bold: True
+            BoxLayout:
+                size_hint_x: None
+                width: self.minimum_width
+                padding: [dp(12), dp(8)]
+                spacing: dp(10)
                 canvas.before:
                     Color:
-                        rgba: 1, 0.84, 0, 1
-                    RoundedRectangle:
+                        rgba: 1, 1, 1, 1
+                    Rectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [dp(50),]
-            Button:
-                id: filter_two_sharing
-                text: '2 Share'
-                background_normal: ''
-                background_color: 0, 0, 0, 0
-                color: 0.2, 0.2, 0.2, 1
-                font_size: sp(13)
-                bold: True
-                canvas.before:
                     Color:
-                        rgba: 0.94, 0.94, 0.94, 1
-                    RoundedRectangle:
-                        pos: self.pos
-                        size: self.size
-                        radius: [dp(50),]
-                    Color:
-                        rgba: 0.88, 0.88, 0.88, 1
-                    Line:
-                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
-                        width: 1.5
-            Button:
-                id: filter_single
-                text: 'Single'
-                background_normal: ''
-                background_color: 0, 0, 0, 0
-                color: 0.2, 0.2, 0.2, 1
-                font_size: sp(13)
-                bold: True
-                canvas.before:
-                    Color:
-                        rgba: 0.94, 0.94, 0.94, 1
-                    RoundedRectangle:
-                        pos: self.pos
-                        size: self.size
-                        radius: [dp(50),]
-                    Color:
-                        rgba: 0.88, 0.88, 0.88, 1
-                    Line:
-                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
-                        width: 1.5
-            Button:
-                id: filter_boys
-                text: 'Boys'
-                background_normal: ''
-                background_color: 0, 0, 0, 0
-                color: 0.2, 0.2, 0.2, 1
-                font_size: sp(13)
-                bold: True
-                canvas.before:
-                    Color:
-                        rgba: 0.94, 0.94, 0.94, 1
-                    RoundedRectangle:
-                        pos: self.pos
-                        size: self.size
-                        radius: [dp(50),]
-                    Color:
-                        rgba: 0.88, 0.88, 0.88, 1
-                    Line:
-                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
-                        width: 1.5
-            Button:
-                id: filter_girls
-                text: 'Girls'
-                background_normal: ''
-                background_color: 0, 0, 0, 0
-                color: 0.2, 0.2, 0.2, 1
-                font_size: sp(13)
-                bold: True
-                canvas.before:
-                    Color:
-                        rgba: 0.94, 0.94, 0.94, 1
-                    RoundedRectangle:
-                        pos: self.pos
-                        size: self.size
-                        radius: [dp(50),]
-                    Color:
-                        rgba: 0.88, 0.88, 0.88, 1
-                    Line:
-                        rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
-                        width: 1.5
+                        rgba: 0, 0, 0, 0.08
+                    Rectangle:
+                        pos: [self.x, self.top - dp(4)]
+                        size: [self.width, dp(4)]
+                
+                # Filter buttons with specific widths
+                Button:
+                    id: filter_all
+                    text: 'All'
+                    size_hint_x: None
+                    width: dp(60)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 1, 1, 1, 1
+                    font_size: sp(13)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 1, 0.84, 0, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(50),]
+                Button:
+                    id: filter_two_sharing
+                    text: '2 Share'
+                    size_hint_x: None
+                    width: dp(80)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 0.2, 0.2, 0.2, 1
+                    font_size: sp(13)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 0.94, 0.94, 0.94, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(50),]
+                        Color:
+                            rgba: 0.88, 0.88, 0.88, 1
+                        Line:
+                            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                            width: 1.5
+                Button:
+                    id: filter_single
+                    text: 'Single'
+                    size_hint_x: None
+                    width: dp(70)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 0.2, 0.2, 0.2, 1
+                    font_size: sp(13)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 0.94, 0.94, 0.94, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(50),]
+                        Color:
+                            rgba: 0.88, 0.88, 0.88, 1
+                        Line:
+                            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                            width: 1.5
+                Button:
+                    id: filter_boys
+                    text: 'Boys'
+                    size_hint_x: None
+                    width: dp(60)
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 0.2, 0.2, 0.2, 1
+                    font_size: sp(13)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 0.94, 0.94, 0.94, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(50),]
+                        Color:
+                            rgba: 0.88, 0.88, 0.88, 1
+                        Line:
+                            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                            width: 1.5
+                Button:
+                    id: filter_girls
+                    text: 'Girls'
+
+                    background_normal: ''
+                    background_color: 0, 0, 0, 0
+                    color: 0.2, 0.2, 0.2, 1
+                    font_size: sp(13)
+                    bold: True
+                    canvas.before:
+                        Color:
+                            rgba: 0.94, 0.94, 0.94, 1
+                        RoundedRectangle:
+                            pos: self.pos
+                            size: self.size
+                            radius: [dp(50),]
+                        Color:
+                            rgba: 0.88, 0.88, 0.88, 1
+                        Line:
+                            rounded_rectangle: [self.x, self.y, self.width, self.height, dp(50)]
+                            width: 1.5
             Button:
                 id: filter_mixed
                 text: 'Mixed'

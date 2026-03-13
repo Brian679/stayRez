@@ -23,13 +23,16 @@ import time
 import urllib.parse
 import webbrowser
 
-API_BASE = "http://127.0.0.1:8000/api/"
+API_BASE = "https://www.offrezapp.co.zw/api/"
 API_AUTH_BASE = API_BASE + "auth/"
 
 # Simple offline cache for GET responses. When online requests succeed we update
 # the cache; when requests fail we fall back to the cached payload if present.
 _CACHE_SCHEMA_VERSION = 1
-_CACHE_PATH = os.path.join(os.path.dirname(__file__), 'offline_cache.json')
+if 'ANDROID_PRIVATE' in os.environ:
+    _CACHE_PATH = os.path.join(os.environ['ANDROID_PRIVATE'], 'offline_cache.json')
+else:
+    _CACHE_PATH = os.path.join(os.path.dirname(__file__), 'offline_cache.json')
 _CACHE = JsonStore(_CACHE_PATH)
 
 
@@ -846,6 +849,8 @@ class PropertyListScreen(Screen):
 
             with holder.canvas.before:
                 StencilPush()
+                # Ensure the stencil shape doesn't inherit an unexpected color.
+                Color(1, 1, 1, 1)
                 holder.clip_rect = RoundedRectangle(pos=holder.pos, size=holder.size, radius=[dp(radius_dp)])
                 StencilUse()
 
@@ -855,6 +860,9 @@ class PropertyListScreen(Screen):
 
             with holder.canvas.after:
                 StencilUnUse()
+                # IMPORTANT: don't paint an opaque rectangle over the image.
+                # This second shape is only to properly close the stencil region.
+                Color(0, 0, 0, 0)
                 RoundedRectangle(pos=holder.pos, size=holder.size, radius=[dp(radius_dp)])
                 StencilPop()
                 # web border: #f1ebe2
@@ -1006,7 +1014,7 @@ class PropertyListScreen(Screen):
         card.add_widget(header)
 
         # Main media (rounded 16)
-        img_src = (prop or {}).get('thumbnail') or 'assets/placeholder.png'
+        img_src = (prop or {}).get('thumbnail') or 'assets/offrez_logo.png'
         media = _make_rounded_media(img_src, 16, height=media_h)
         card.add_widget(media)
 
@@ -1652,7 +1660,7 @@ class PropertyDetailScreen(Screen):
             thumb.bind(pos=lambda w, v: setattr(w.bg, 'pos', v))
             thumb.bind(size=lambda w, v: setattr(w.bg, 'size', v))
 
-            img = AsyncImage(source=url, fit_mode='contain')
+            img = AsyncImage(source=url, fit_mode='cover')
             thumb.add_widget(img)
             thumb.bind(on_release=lambda _w, u=url: self.open_image_modal(u))
             container.add_widget(thumb)
@@ -3934,13 +3942,11 @@ class OffRezApp(App):
             try:
                 Builder.load_file(path)
             except Exception:
-                log_path = os.path.join(os.path.dirname(__file__), 'offrez_kv_error.log')
-                with open(log_path, 'a', encoding='utf-8') as fh:
-                    fh.write(f"{datetime.utcnow().isoformat()} - KV load error ({label}):\n")
-                    fh.write(traceback.format_exc())
-                    fh.write('\n---\n')
-                print('Failed to load', label, 'KV; wrote traceback to', log_path)
-                KV_LOAD_ERROR = log_path
+                # On Android, we cannot write to the APK directory. Print to logcat instead.
+                print(f"KV load error ({label}):")
+                print(traceback.format_exc())
+                print('---')
+                KV_LOAD_ERROR = "Check Logcat for details"
 
         _load_one(KV_PATH, 'main')
         _load_one(EXTRA_KV_PATH, 'extra')
