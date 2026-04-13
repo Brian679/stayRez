@@ -4,24 +4,20 @@
 {% block page_title %}Short-term Lodges{% if search_query %} in {{ search_query }}{% endif %} | offRez{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-    <h2>Short-term Lodges</h2>
-    <p class="text-muted mb-0">Select a lodge to visit its website.</p>
-  </div>
+<div class="container-fluid py-3 px-md-4">
 
   <!-- Search / Location Filter -->
-  <form method="get" class="mb-4">
+  <form method="get" class="mb-3">
     <div class="row g-2 align-items-end">
-      <div class="col-12 col-md-5">
-        <div class="input-group">
+      <div class="col-12 col-md-4">
+        <div class="input-group input-group-sm">
           <input type="text" name="q" class="form-control" placeholder="Search by city, e.g. Harare..." value="{{ search_query }}">
-          <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Search</button>
+          <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
         </div>
       </div>
       {% if all_locations %}
-      <div class="col-12 col-md-4">
-        <div class="d-flex flex-wrap gap-2">
+      <div class="col-12 col-md-6">
+        <div class="d-flex flex-wrap gap-1">
           <a href="?" class="btn btn-sm {% if not search_query %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
           {% for loc in all_locations %}
           <a href="?q={{ loc }}" class="btn btn-sm {% if search_query == loc %}btn-dark{% else %}btn-outline-secondary{% endif %}">{{ loc }}</a>
@@ -38,24 +34,51 @@
   </form>
 
   {% if search_query %}
-  <p class="text-muted">Showing lodges matching <strong>"{{ search_query }}"</strong> ({{ lodges|length }} result{{ lodges|length|pluralize }})</p>
+  <p class="text-muted small mb-2">Showing lodges matching <strong>"{{ search_query }}"</strong> ({{ lodges|length }} result{{ lodges|length|pluralize }})</p>
   {% endif %}
 
   {% if lodges %}
-  <div class="row">
-    {% for lodge in lodges %}
-    <div class="col-6 col-md-4 col-lg-3 mb-4">
-      <a href="{{ lodge.url|safe }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
-        <div class="card h-100 shadow-sm lodge-card">
-          <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" class="card-img-top" style="height:160px;object-fit:cover;">
-          <div class="card-body text-center py-2">
-            <h6 class="card-title mb-1">{{ lodge.name }}</h6>
-            {% if lodge.location %}<span class="badge bg-secondary mb-1"><i class="fas fa-map-marker-alt"></i> {{ lodge.location }}</span>{% endif %}
+  <div class="row" style="min-height:80vh;">
+    <!-- Lodge sidebar list -->
+    <div class="col-12 col-md-3 col-lg-2 mb-3 mb-md-0">
+      <h6 class="text-muted mb-2">Short-term Lodges</h6>
+      <div class="list-group lodge-list" id="lodge-list">
+        {% for lodge in lodges %}
+        <a href="#" class="list-group-item list-group-item-action py-2 px-2 lodge-item{% if forloop.first %} active{% endif %}" data-url="{{ lodge.url|safe }}" data-name="{{ lodge.name }}">
+          <div class="d-flex align-items-center">
+            <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" class="rounded me-2" style="width:40px;height:30px;object-fit:cover;">
+            <div style="min-width:0;">
+              <div class="fw-bold small text-truncate">{{ lodge.name }}</div>
+              {% if lodge.location %}<span class="badge bg-secondary" style="font-size:0.65rem;"><i class="fas fa-map-marker-alt"></i> {{ lodge.location }}</span>{% endif %}
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Iframe viewer -->
+    <div class="col-12 col-md-9 col-lg-10">
+      <div class="card shadow-sm h-100">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <span id="iframe-title" class="fw-bold">{{ lodges.0.name }}</span>
+          <a href="{{ lodges.0.url|safe }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary" id="open-newtab">
+            <i class="fas fa-external-link-alt"></i> Open in new tab
+          </a>
+        </div>
+        <div class="card-body p-0" style="height:calc(80vh - 50px);min-height:500px;">
+          <iframe id="lodge-iframe" src="about:blank" frameborder="0" style="width:100%;height:100%;border:none;" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" loading="lazy"></iframe>
+          <!-- Fallback overlay shown if iframe fails -->
+          <div id="iframe-fallback" class="d-none position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light" style="z-index:10;">
+            <i class="fas fa-globe fa-3x text-muted mb-3"></i>
+            <p class="text-muted">This site cannot be displayed in a frame.</p>
+            <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="fallback-link">
+              <i class="fas fa-external-link-alt"></i> Open website directly
+            </a>
           </div>
         </div>
-      </a>
+      </div>
     </div>
-    {% endfor %}
   </div>
   {% else %}
   <div class="text-center py-5 text-muted">
@@ -70,14 +93,97 @@
 </div>
 
 <style>
-  .lodge-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
+  .lodge-list {
+    max-height: 80vh;
+    overflow-y: auto;
   }
-  .lodge-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+  .lodge-list .list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+  }
+  .lodge-list .list-group-item.active .badge {
+    background-color: rgba(255,255,255,0.3) !important;
+  }
+  .lodge-list .list-group-item:hover:not(.active) {
+    background-color: #f0f0f0;
+  }
+  .card-body {
+    position: relative;
   }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const items = document.querySelectorAll('.lodge-item');
+  const iframe = document.getElementById('lodge-iframe');
+  const title = document.getElementById('iframe-title');
+  const openBtn = document.getElementById('open-newtab');
+  const fallback = document.getElementById('iframe-fallback');
+  const fallbackLink = document.getElementById('fallback-link');
+
+  if (!iframe) return;
+
+  /**
+   * Convert a Google Maps URL to an embeddable version.
+   * Extracts coords from /@lat,lng or ?q=lat,lng patterns and uses output=embed.
+   */
+  function toEmbedUrl(url) {
+    // Already an embed URL
+    if (/google\.com\/maps\/embed/i.test(url)) return url;
+
+    // Google Maps link — extract coordinates from /@lat,lng,zoom pattern
+    if (/google\.com\/maps/i.test(url)) {
+      var coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+)/);
+      if (coordMatch) {
+        var lat = coordMatch[1];
+        var lng = coordMatch[2];
+        var zoom = coordMatch[3];
+        return 'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=' + zoom + '&output=embed';
+      }
+      // Try extracting place name from /place/NAME/ pattern
+      var placeMatch = url.match(/\/place\/([^/@]+)/);
+      if (placeMatch) {
+        var place = placeMatch[1].replace(/\+/g, ' ');
+        return 'https://maps.google.com/maps?q=' + encodeURIComponent(place) + '&output=embed';
+      }
+      // Generic fallback: append output=embed
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      return url + sep + 'output=embed';
+    }
+
+    return url;
+  }
+
+  function loadLodge(url, name) {
+    var embedUrl = toEmbedUrl(url);
+    iframe.src = embedUrl;
+    if (title) title.textContent = name;
+    if (openBtn) openBtn.href = url;        // original URL for "open in new tab"
+    if (fallbackLink) fallbackLink.href = url;
+    if (fallback) fallback.classList.add('d-none');
+  }
+
+  items.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      var url = this.dataset.url;
+      var name = this.dataset.name;
+
+      // Update active state
+      items.forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+
+      loadLodge(url, name);
+    });
+  });
+
+  // Auto-load first lodge
+  if (items.length > 0) {
+    var first = items[0];
+    loadLodge(first.dataset.url, first.dataset.name);
+  }
+});
+</script>
 
 {% endblock %}
