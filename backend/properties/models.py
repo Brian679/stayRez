@@ -138,6 +138,7 @@ class ShortTermLodge(models.Model):
     name = models.CharField(max_length=200)
     url = models.URLField(max_length=1000)
     thumb_url = models.CharField(max_length=1000, blank=True, help_text="Optional thumbnail URL or static path")
+    location = models.CharField(max_length=200, blank=True, default='', help_text="City or area, e.g. Harare, Bulawayo, Victoria Falls")
     is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -146,4 +147,4 @@ class ShortTermLodge(models.Model):
         ordering = ["order", "name"]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.location})" if self.location else self.name

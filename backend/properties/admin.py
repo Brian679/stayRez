@@ -47,7 +47,7 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(ShortTermLodge)
 class ShortTermLodgeAdmin(admin.ModelAdmin):
-    list_display = ("name", "url", "is_active", "order", "created_at")
-    list_filter = ("is_active",)
-    search_fields = ("name", "url")
-    list_editable = ("is_active", "order")
+    list_display = ("name", "location", "url", "is_active", "order", "created_at")
+    list_filter = ("is_active", "location")
+    search_fields = ("name", "url", "location")
+    list_editable = ("is_active", "order", "location")

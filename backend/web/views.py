@@ -1308,24 +1308,46 @@ def shortterm_properties(request, service_slug=None):
 
 
 def shortterm_lodges(request, service_slug=None):
-    """Show curated list of short-term lodge websites embedded via iframe."""
+    """Show curated list of short-term lodge websites, filterable by location."""
+    search_query = request.GET.get('q', '').strip()
     try:
         from properties.models import ShortTermLodge
         lodges_qs = ShortTermLodge.objects.filter(is_active=True).order_by('order')
+
+        # Get distinct locations for the filter dropdown
+        all_locations = list(
+            ShortTermLodge.objects.filter(is_active=True)
+            .exclude(location='')
+            .values_list('location', flat=True)
+            .distinct()
+            .order_by('location')
+        )
+
+        # Filter by search query (matches location or name)
+        if search_query:
+            lodges_qs = lodges_qs.filter(
+                models.Q(location__icontains=search_query) |
+                models.Q(name__icontains=search_query)
+            )
+
         lodges = []
         for l in lodges_qs:
             lodges.append({
                 'name': l.name,
                 'url': l.url,
                 'thumb': l.thumb_url or '/static/images/shortterm.jpg',
+                'location': l.location,
             })
     except Exception:
-        # Fallback to a minimal static list if model isn't migrated yet
-        lodges = [
-            {"name": "Example Lodge A", "url": "https://example.com", "thumb": "/static/images/shortterm.jpg"},
-        ]
+        lodges = []
+        all_locations = []
 
-    return render(request, "web/shortterm_lodges.html", {"lodges": lodges, "service_slug": service_slug})
+    return render(request, "web/shortterm_lodges.html", {
+        "lodges": lodges,
+        "service_slug": service_slug,
+        "search_query": search_query,
+        "all_locations": all_locations,
+    })
 
 
 @login_required
