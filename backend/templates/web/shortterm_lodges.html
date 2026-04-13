@@ -8,7 +8,7 @@
 
   <!-- Search / Location Filter -->
   <form method="get" class="mb-3">
-    <div class="row g-2 align-items-end">
+    <div class="row g-2 align-items-center">
       <div class="col-12 col-md-4">
         <div class="input-group input-group-sm">
           <input type="text" name="q" class="form-control" placeholder="Search by city, e.g. Harare..." value="{{ search_query }}">
@@ -38,47 +38,42 @@
   {% endif %}
 
   {% if lodges %}
-  <div class="row" style="min-height:80vh;">
-    <!-- Lodge sidebar list -->
-    <div class="col-12 col-md-3 col-lg-2 mb-3 mb-md-0">
-      <h6 class="text-muted mb-2">Short-term Lodges</h6>
-      <div class="list-group lodge-list" id="lodge-list">
-        {% for lodge in lodges %}
-        <a href="#" class="list-group-item list-group-item-action py-2 px-2 lodge-item{% if forloop.first %} active{% endif %}" data-url="{{ lodge.url|safe }}" data-name="{{ lodge.name }}">
-          <div class="d-flex align-items-center">
-            <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" class="rounded me-2" style="width:40px;height:30px;object-fit:cover;">
-            <div style="min-width:0;">
-              <div class="fw-bold small text-truncate">{{ lodge.name }}</div>
-              {% if lodge.location %}<span class="badge bg-secondary" style="font-size:0.65rem;"><i class="fas fa-map-marker-alt"></i> {{ lodge.location }}</span>{% endif %}
-            </div>
+  <div class="row">
+    {% for lodge in lodges %}
+    <div class="col-12 col-md-6 col-xl-4 mb-4">
+      <div class="browser-window shadow-sm">
+        <!-- Browser chrome / title bar -->
+        <div class="browser-bar">
+          <div class="browser-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
           </div>
-        </a>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Iframe viewer -->
-    <div class="col-12 col-md-9 col-lg-10">
-      <div class="card shadow-sm h-100">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-          <span id="iframe-title" class="fw-bold">{{ lodges.0.name }}</span>
-          <a href="{{ lodges.0.url|safe }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary" id="open-newtab">
-            <i class="fas fa-external-link-alt"></i> Open in new tab
-          </a>
-        </div>
-        <div class="card-body p-0" style="height:calc(80vh - 50px);min-height:500px;">
-          <iframe id="lodge-iframe" src="about:blank" frameborder="0" style="width:100%;height:100%;border:none;" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" loading="lazy"></iframe>
-          <!-- Fallback overlay shown if iframe fails -->
-          <div id="iframe-fallback" class="d-none position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-light" style="z-index:10;">
-            <i class="fas fa-globe fa-3x text-muted mb-3"></i>
-            <p class="text-muted">This site cannot be displayed in a frame.</p>
-            <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="fallback-link">
-              <i class="fas fa-external-link-alt"></i> Open website directly
+          <div class="browser-title">{{ lodge.name }}</div>
+          <div class="browser-actions">
+            {% if lodge.location %}<span class="badge bg-light text-dark me-1" style="font-size:0.65rem;"><i class="fas fa-map-marker-alt text-danger"></i> {{ lodge.location }}</span>{% endif %}
+            <a href="{{ lodge.url|safe }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-light py-0 px-1" title="Open in new tab">
+              <i class="fas fa-external-link-alt" style="font-size:0.7rem;"></i>
             </a>
           </div>
         </div>
+        <!-- Address bar -->
+        <div class="browser-address">
+          <i class="fas fa-lock text-success me-1" style="font-size:0.65rem;"></i>
+          <span class="address-text">{{ lodge.url|truncatechars:60 }}</span>
+        </div>
+        <!-- Iframe content area -->
+        <div class="browser-content">
+          <iframe data-src="{{ lodge.url|safe }}" src="about:blank" frameborder="0" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" loading="lazy"></iframe>
+          <!-- Loading spinner -->
+          <div class="iframe-loading">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="ms-2 small text-muted">Loading...</span>
+          </div>
+        </div>
       </div>
     </div>
+    {% endfor %}
   </div>
   {% else %}
   <div class="text-center py-5 text-muted">
@@ -93,96 +88,141 @@
 </div>
 
 <style>
-  .lodge-list {
-    max-height: 80vh;
-    overflow-y: auto;
+  .browser-window {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.2s ease;
   }
-  .lodge-list .list-group-item.active {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    color: #fff;
+  .browser-window:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
   }
-  .lodge-list .list-group-item.active .badge {
-    background-color: rgba(255,255,255,0.3) !important;
+
+  /* Title bar */
+  .browser-bar {
+    background: linear-gradient(180deg, #3a3a3a, #2d2d2d);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
-  .lodge-list .list-group-item:hover:not(.active) {
-    background-color: #f0f0f0;
+  .browser-dots {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
   }
-  .card-body {
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #28c840; }
+  .browser-title {
+    color: #e0e0e0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    text-align: center;
+  }
+  .browser-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Address bar */
+  .browser-address {
+    background: #f1f3f4;
+    border-bottom: 1px solid #ddd;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    font-size: 0.72rem;
+    color: #555;
+  }
+  .address-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Content area */
+  .browser-content {
     position: relative;
+    height: 350px;
+  }
+  .browser-content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+  .iframe-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .iframe-loaded .iframe-loading {
+    opacity: 0;
+  }
+
+  /* Responsive: taller on mobile */
+  @media (max-width: 767px) {
+    .browser-content {
+      height: 300px;
+    }
   }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const items = document.querySelectorAll('.lodge-item');
-  const iframe = document.getElementById('lodge-iframe');
-  const title = document.getElementById('iframe-title');
-  const openBtn = document.getElementById('open-newtab');
-  const fallback = document.getElementById('iframe-fallback');
-  const fallbackLink = document.getElementById('fallback-link');
-
-  if (!iframe) return;
 
   /**
    * Convert a Google Maps URL to an embeddable version.
-   * Extracts coords from /@lat,lng or ?q=lat,lng patterns and uses output=embed.
    */
   function toEmbedUrl(url) {
-    // Already an embed URL
     if (/google\.com\/maps\/embed/i.test(url)) return url;
 
-    // Google Maps link — extract coordinates from /@lat,lng,zoom pattern
     if (/google\.com\/maps/i.test(url)) {
       var coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+)/);
       if (coordMatch) {
-        var lat = coordMatch[1];
-        var lng = coordMatch[2];
-        var zoom = coordMatch[3];
-        return 'https://maps.google.com/maps?q=' + lat + ',' + lng + '&z=' + zoom + '&output=embed';
+        return 'https://maps.google.com/maps?q=' + coordMatch[1] + ',' + coordMatch[2] + '&z=' + coordMatch[3] + '&output=embed';
       }
-      // Try extracting place name from /place/NAME/ pattern
       var placeMatch = url.match(/\/place\/([^/@]+)/);
       if (placeMatch) {
-        var place = placeMatch[1].replace(/\+/g, ' ');
-        return 'https://maps.google.com/maps?q=' + encodeURIComponent(place) + '&output=embed';
+        return 'https://maps.google.com/maps?q=' + encodeURIComponent(placeMatch[1].replace(/\+/g, ' ')) + '&output=embed';
       }
-      // Generic fallback: append output=embed
       var sep = url.indexOf('?') === -1 ? '?' : '&';
       return url + sep + 'output=embed';
     }
-
     return url;
   }
 
-  function loadLodge(url, name) {
-    var embedUrl = toEmbedUrl(url);
-    iframe.src = embedUrl;
-    if (title) title.textContent = name;
-    if (openBtn) openBtn.href = url;        // original URL for "open in new tab"
-    if (fallbackLink) fallbackLink.href = url;
-    if (fallback) fallback.classList.add('d-none');
-  }
-
-  items.forEach(function(item) {
-    item.addEventListener('click', function(e) {
-      e.preventDefault();
-      var url = this.dataset.url;
-      var name = this.dataset.name;
-
-      // Update active state
-      items.forEach(function(x) { x.classList.remove('active'); });
-      this.classList.add('active');
-
-      loadLodge(url, name);
-    });
+  // Lazy-load iframes with a small stagger so the page isn't blocked
+  var iframes = document.querySelectorAll('.browser-content iframe');
+  iframes.forEach(function(iframe, i) {
+    setTimeout(function() {
+      var src = iframe.getAttribute('data-src');
+      if (src) {
+        iframe.src = toEmbedUrl(src);
+        iframe.addEventListener('load', function() {
+          iframe.closest('.browser-content').classList.add('iframe-loaded');
+        });
+      }
+    }, i * 300); // stagger each by 300ms
   });
-
-  // Auto-load first lodge
-  if (items.length > 0) {
-    var first = items[0];
-    loadLodge(first.dataset.url, first.dataset.name);
-  }
 });
 </script>
 
