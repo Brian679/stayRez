@@ -41,55 +41,48 @@
   <div class="row">
     {% for lodge in lodges %}
     <div class="col-12 col-md-6 col-xl-4 mb-4">
-      <a href="{{ lodge.url|safe }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none chrome-link">
-        <div class="chrome-window shadow-sm">
-          <!-- Tab bar -->
-          <div class="chrome-tabbar">
-            <div class="chrome-tab active-tab">
-              <i class="fas fa-globe" style="font-size:0.65rem;margin-right:4px;color:#9aa0a6;"></i>
-              <span class="tab-title">{{ lodge.name }}</span>
-              <span class="tab-close">&times;</span>
-            </div>
-            <div class="chrome-tab-new"><i class="fas fa-plus" style="font-size:0.6rem;color:#9aa0a6;"></i></div>
+      <div class="chrome-window shadow-sm">
+        <!-- Tab bar -->
+        <div class="chrome-tabbar">
+          <div class="chrome-tab active-tab">
+            <i class="fas fa-globe" style="font-size:0.65rem;margin-right:4px;color:#9aa0a6;"></i>
+            <span class="tab-title">{{ lodge.name }}</span>
+            <span class="tab-close">&times;</span>
           </div>
-          <!-- Toolbar (address bar + buttons) -->
-          <div class="chrome-toolbar">
-            <div class="toolbar-buttons">
-              <i class="fas fa-arrow-left toolbar-icon"></i>
-              <i class="fas fa-arrow-right toolbar-icon"></i>
-              <i class="fas fa-redo toolbar-icon"></i>
-            </div>
-            <div class="chrome-addressbar">
-              <i class="fas fa-lock" style="font-size:0.6rem;color:#188038;margin-right:5px;"></i>
-              <span class="address-url">{{ lodge.url|truncatechars:50 }}</span>
-            </div>
-            <div class="toolbar-buttons">
-              <i class="fas fa-star toolbar-icon"></i>
-              <i class="fas fa-ellipsis-v toolbar-icon"></i>
-            </div>
+          <div class="chrome-tab-new"><i class="fas fa-plus" style="font-size:0.6rem;color:#9aa0a6;"></i></div>
+        </div>
+        <!-- Toolbar (address bar + buttons) -->
+        <div class="chrome-toolbar">
+          <div class="toolbar-buttons">
+            <i class="fas fa-arrow-left toolbar-icon"></i>
+            <i class="fas fa-arrow-right toolbar-icon"></i>
+            <i class="fas fa-redo toolbar-icon"></i>
           </div>
-          <!-- Bookmark bar -->
-          <div class="chrome-bookmarkbar">
-            {% if lodge.location %}<span class="bm-item"><i class="fas fa-map-marker-alt text-danger" style="font-size:0.6rem;"></i> {{ lodge.location }}</span>{% endif %}
+          <div class="chrome-addressbar">
+            <i class="fas fa-lock" style="font-size:0.6rem;color:#188038;margin-right:5px;"></i>
+            <span class="address-url">{{ lodge.url|truncatechars:50 }}</span>
           </div>
-          <!-- Page content area (image preview) -->
-          <div class="chrome-content">
-            <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" class="content-img">
-            <!-- Overlay -->
-            <div class="content-overlay">
-              <div class="overlay-inner">
-                <i class="fas fa-external-link-alt fa-2x mb-2"></i>
-                <div class="fw-bold">Visit {{ lodge.name }}</div>
-                <small>Click to open website</small>
-              </div>
-            </div>
-          </div>
-          <!-- Status bar -->
-          <div class="chrome-statusbar">
-            <span class="status-text"><i class="fas fa-check-circle text-success me-1"></i>Ready</span>
+          <div class="toolbar-buttons">
+            {% if lodge.location %}<span class="badge bg-light text-dark me-2" style="font-size:0.6rem;"><i class="fas fa-map-marker-alt text-danger"></i> {{ lodge.location }}</span>{% endif %}
+            <a href="{{ lodge.url|safe }}" target="_blank" rel="noopener noreferrer" class="toolbar-icon text-decoration-none" title="Open in new tab">
+              <i class="fas fa-external-link-alt"></i>
+            </a>
           </div>
         </div>
-      </a>
+        <!-- Page content: iframe that loads the actual website -->
+        <div class="chrome-content">
+          <iframe src="{{ lodge.url|safe }}" frameborder="0" allowfullscreen loading="eager" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <!-- Loading spinner (hidden once iframe loads) -->
+          <div class="iframe-loading">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 small text-muted">Loading {{ lodge.name }}...</div>
+          </div>
+        </div>
+        <!-- Status bar -->
+        <div class="chrome-statusbar">
+          <span class="status-text"><i class="fas fa-spinner fa-spin me-1"></i> Loading...</span>
+        </div>
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -106,19 +99,11 @@
 </div>
 
 <style>
-  .chrome-link { color: inherit; }
-
   .chrome-window {
     border: 1px solid #c0c0c0;
     border-radius: 10px 10px 6px 6px;
     overflow: hidden;
     background: #fff;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-  }
-  .chrome-window:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.18) !important;
   }
 
   /* Tab bar */
@@ -156,9 +141,7 @@
     line-height: 1;
     margin-left: 4px;
   }
-  .chrome-tab-new {
-    padding: 5px 8px;
-  }
+  .chrome-tab-new { padding: 5px 8px; }
 
   /* Toolbar */
   .chrome-toolbar {
@@ -173,6 +156,7 @@
     display: flex;
     gap: 8px;
     flex-shrink: 0;
+    align-items: center;
   }
   .toolbar-icon {
     font-size: 0.65rem;
@@ -195,56 +179,33 @@
     text-overflow: ellipsis;
   }
 
-  /* Bookmark bar */
-  .chrome-bookmarkbar {
-    background: #fff;
-    padding: 2px 12px;
-    border-bottom: 1px solid #e8eaed;
-    min-height: 20px;
-    font-size: 0.68rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .bm-item {
-    color: #5f6368;
-  }
-
-  /* Content area */
+  /* Content area with iframe */
   .chrome-content {
     position: relative;
-    height: 280px;
+    height: 350px;
     overflow: hidden;
-    background: #f8f9fa;
+    background: #fff;
   }
-  .content-img {
+  .chrome-content iframe {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    border: none;
     display: block;
-    transition: transform 0.3s ease;
   }
-  .chrome-window:hover .content-img {
-    transform: scale(1.03);
-  }
-
-  /* Hover overlay */
-  .content-overlay {
+  .iframe-loading {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: #fff;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    z-index: 2;
+    transition: opacity 0.4s ease;
+  }
+  .iframe-loaded .iframe-loading {
     opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  .chrome-window:hover .content-overlay {
-    opacity: 1;
-  }
-  .overlay-inner {
-    color: #fff;
-    text-align: center;
+    pointer-events: none;
   }
 
   /* Status bar */
@@ -257,9 +218,24 @@
   }
 
   @media (max-width: 767px) {
-    .chrome-content { height: 220px; }
+    .chrome-content { height: 280px; }
     .chrome-addressbar { padding: 4px 8px; }
   }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var iframes = document.querySelectorAll('.chrome-content iframe');
+  iframes.forEach(function(iframe) {
+    iframe.addEventListener('load', function() {
+      // Hide spinner, update status bar
+      var card = iframe.closest('.chrome-window');
+      iframe.closest('.chrome-content').classList.add('iframe-loaded');
+      var status = card.querySelector('.status-text');
+      if (status) status.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Loaded';
+    });
+  });
+});
+</script>
 
 {% endblock %}
