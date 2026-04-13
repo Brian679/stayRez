@@ -136,7 +136,7 @@ class Review(models.Model):
 class ShortTermLodge(models.Model):
     """Curated short-term lodge websites shown inside an iframe preview."""
     name = models.CharField(max_length=200)
-    url = models.URLField(max_length=1000)
+    url = models.CharField(max_length=2000, help_text="Full URL to the lodge website or Google Maps link")
     thumb_url = models.CharField(max_length=1000, blank=True, help_text="Optional thumbnail URL or static path")
     location = models.CharField(max_length=200, blank=True, default='', help_text="City or area, e.g. Harare, Bulawayo, Victoria Falls")
     is_active = models.BooleanField(default=True)

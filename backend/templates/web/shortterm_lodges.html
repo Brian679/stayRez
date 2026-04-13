@@ -45,13 +45,12 @@
   <div class="row">
     {% for lodge in lodges %}
     <div class="col-6 col-md-4 col-lg-3 mb-4">
-      <a href="{{ lodge.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
+      <a href="{{ lodge.url|safe }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
         <div class="card h-100 shadow-sm lodge-card">
           <img src="{{ lodge.thumb }}" alt="{{ lodge.name }}" class="card-img-top" style="height:160px;object-fit:cover;">
           <div class="card-body text-center py-2">
             <h6 class="card-title mb-1">{{ lodge.name }}</h6>
             {% if lodge.location %}<span class="badge bg-secondary mb-1"><i class="fas fa-map-marker-alt"></i> {{ lodge.location }}</span>{% endif %}
-            <br><small class="text-muted">{{ lodge.url|truncatechars:35 }}</small>
           </div>
         </div>
       </a>
