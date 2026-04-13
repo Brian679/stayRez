@@ -64,7 +64,7 @@
         </div>
         <!-- Iframe content area -->
         <div class="browser-content">
-          <iframe data-src="{{ lodge.url|safe }}" src="about:blank" frameborder="0" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" loading="lazy"></iframe>
+          <iframe data-src="{{ lodge.url|safe }}" src="about:blank" frameborder="0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
           <!-- Loading spinner -->
           <div class="iframe-loading">
             <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -196,16 +196,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (/google\.com\/maps\/embed/i.test(url)) return url;
 
     if (/google\.com\/maps/i.test(url)) {
-      var coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+)/);
+      // Try coords from /@lat,lng,zoomz pattern
+      var coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+)z?/);
       if (coordMatch) {
-        return 'https://maps.google.com/maps?q=' + coordMatch[1] + ',' + coordMatch[2] + '&z=' + coordMatch[3] + '&output=embed';
+        return 'https://www.google.com/maps?q=' + coordMatch[1] + ',' + coordMatch[2] + '&z=' + coordMatch[3] + '&output=embed';
       }
+      // Try place name from /place/NAME/ pattern
       var placeMatch = url.match(/\/place\/([^/@]+)/);
       if (placeMatch) {
-        return 'https://maps.google.com/maps?q=' + encodeURIComponent(placeMatch[1].replace(/\+/g, ' ')) + '&output=embed';
+        return 'https://www.google.com/maps?q=' + encodeURIComponent(placeMatch[1].replace(/\+/g, ' ')) + '&output=embed';
       }
-      var sep = url.indexOf('?') === -1 ? '?' : '&';
-      return url + sep + 'output=embed';
+      // Try ?q= parameter already in URL
+      var qMatch = url.match(/[?&]q=([^&]+)/);
+      if (qMatch) {
+        return 'https://www.google.com/maps?q=' + qMatch[1] + '&output=embed';
+      }
+      // Fallback: just append output=embed
+      return 'https://www.google.com/maps?q=&output=embed';
     }
     return url;
   }
