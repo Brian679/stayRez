@@ -1,10 +1,7 @@
 from django.urls import path
 from . import views
+
 from .views_feedback import FeedbackCreateView
-# Feedback endpoint
-urlpatterns.append(
-    path("feedback/", FeedbackCreateView.as_view(), name="feedback-create")
-)
 
 urlpatterns = [
     path("auth/register/", views.RegisterView.as_view(), name="api-register"),
@@ -47,4 +44,6 @@ urlpatterns = [
     # notifications
     path("notifications/", views.NotificationListView.as_view(), name="notifications-list"),
     path("notifications/<int:pk>/mark-read/", views.MarkNotificationReadView.as_view(), name="mark-notification-read"),
+    # Feedback endpoint
+    path("feedback/", FeedbackCreateView.as_view(), name="feedback-create"),
 ]
