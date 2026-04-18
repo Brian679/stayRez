@@ -11,3 +11,8 @@ class CoreConfig(AppConfig):
             import payments.signals  # noqa
         except Exception:
             pass
+        # Ensure Feedback model is registered
+        try:
+            from . import models_feedback  # noqa
+        except Exception:
+            pass

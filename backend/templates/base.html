@@ -1,7 +1,7 @@
 {% load static %}
 <!doctype html>
 <html lang="en">
-  <head>
+  <head> 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block page_title %}offRez | Off Campus Accommodation{% endblock %}</title>
@@ -53,6 +53,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     {% block extra_head %}{% endblock %}
+    <style>
+      /* Feedback Modal Styles */
+      .modal-backdrop.show { opacity: 0.3; }
+      #feedbackModal .modal-header { background: #ffd700; color: #000; }
+      #feedbackModal .form-label { font-weight: 500; }
+      #feedbackModal .form-check-label { font-weight: 400; }
+      #feedbackModal .form-check { margin-bottom: 0.3rem; }
+      #feedbackModal .form-control, #feedbackModal .form-select { font-size: 0.98rem; }
+    </style>
     <style>
       :root {
         --offrez-black: #000;
@@ -215,6 +224,173 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Feedback Modal -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form id="feedbackForm">
+            <div class="modal-header">
+              <h5 class="modal-title" id="feedbackModalLabel">We value your feedback!</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-2">
+                <label class="form-label">Name (optional)</label>
+                <input type="text" class="form-control" name="name" maxlength="100">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Age</label>
+                <select class="form-select" name="age">
+                  <option value="">Select</option>
+                  <option>Below 18</option><option>18–25</option><option>26–35</option><option>36–45</option><option>Above 45</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Gender</label>
+                <select class="form-select" name="gender">
+                  <option value="">Select</option>
+                  <option>Male</option><option>Female</option><option>Prefer not to say</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Occupation</label>
+                <select class="form-select" name="occupation" id="occupationSelect">
+                  <option value="">Select</option>
+                  <option>Student</option><option>Tenant</option><option>Landlord</option><option>Real Estate Agent</option><option>Other</option>
+                </select>
+                <input type="text" class="form-control mt-1 d-none" name="occupation_other" id="occupationOther" placeholder="Please specify">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">City/Town</label>
+                <select class="form-select" name="city">
+                  <option value="">Select</option>
+                  <option>Harare</option><option>Chinhoyi</option><option>Gweru</option><option>Bindura</option><option>Masvingo</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Do you have access to the internet?</label>
+                <select class="form-select" name="has_internet"><option value="">Select</option><option>Yes</option><option>No</option></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">How often do you use online platforms for property search?</label>
+                <select class="form-select" name="online_search_freq">
+                  <option value="">Select</option>
+                  <option>Never</option><option>Rarely</option><option>Sometimes</option><option>Often</option><option>Always</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">How would you rate the current property search methods?</label>
+                <select class="form-select" name="current_methods_rating">
+                  <option value="">Select</option>
+                  <option>Very Poor</option><option>Poor</option><option>Fair</option><option>Good</option><option>Excellent</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">What challenges do you face? (Select all that apply)</label>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="challenges" value="Lack of accurate information" id="ch1"><label class="form-check-label" for="ch1">Lack of accurate information</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="challenges" value="No location/map visualization" id="ch2"><label class="form-check-label" for="ch2">No location/map visualization</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="challenges" value="Time-consuming" id="ch3"><label class="form-check-label" for="ch3">Time-consuming</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="challenges" value="Fraud/misinformation" id="ch4"><label class="form-check-label" for="ch4">Fraud/misinformation</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" name="challenges" value="Limited options" id="ch5"><label class="form-check-label" for="ch5">Limited options</label></div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">The platform is easy to use</label>
+                <select class="form-select" name="easy_to_use"><option value="">Select</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">The interface is user-friendly</label>
+                <select class="form-select" name="user_friendly"><option value="">Select</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">The system responds quickly</label>
+                <select class="form-select" name="quick_response"><option value="">Select</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">It is easy to search for properties</label>
+                <select class="form-select" name="easy_search"><option value="">Select</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">What did you like most about the platform?</label>
+                <textarea class="form-control" name="like_most" rows="1" maxlength="300"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">What challenges did you experience?</label>
+                <textarea class="form-control" name="challenges_exp" rows="1" maxlength="300"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">What improvements would you suggest?</label>
+                <textarea class="form-control" name="improvements" rows="1" maxlength="300"></textarea>
+              </div>
+              <div id="feedbackThanks" class="alert alert-success d-none mt-2">Thank you for your feedback!</div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Submit</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Show/hide occupation other field
+      document.addEventListener('DOMContentLoaded', function() {
+        var occSel = document.getElementById('occupationSelect');
+        var occOther = document.getElementById('occupationOther');
+        if (occSel && occOther) {
+          occSel.addEventListener('change', function() {
+            occOther.classList.toggle('d-none', occSel.value !== 'Other');
+          });
+        }
+      });
+      // Feedback modal logic
+      let feedbackModalShown = false;
+      function showFeedbackModal() {
+        if (!feedbackModalShown) {
+          var modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+          modal.show();
+          feedbackModalShown = true;
+        }
+      }
+      // Show feedback modal after 30s or on scroll (first time only)
+      setTimeout(showFeedbackModal, 30000);
+      window.addEventListener('scroll', function() {
+        if (window.scrollY > 200) showFeedbackModal();
+      }, { once: true });
+      // Handle feedback form submit
+      document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('feedbackForm');
+        if (!form) return;
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          var data = new FormData(form);
+          // Collect challenges as comma-separated
+          var challenges = [];
+          form.querySelectorAll('input[name="challenges"]:checked').forEach(function(cb) { challenges.push(cb.value); });
+          data.set('challenges', challenges.join(','));
+          // Remove empty fields
+          var obj = {};
+          data.forEach((v, k) => { if (v) obj[k] = v; });
+          // POST to API
+          try {
+            var resp = await fetch('/api/feedback/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(obj)
+            });
+            if (resp.ok) {
+              form.reset();
+              document.getElementById('feedbackThanks').classList.remove('d-none');
+              setTimeout(() => { var modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal')); if (modal) modal.hide(); }, 2000);
+            } else {
+              var err = await resp.json();
+              alert('Error: ' + (err.detail || 'Please check your input.'));
+            }
+          } catch (e) {
+            alert('Could not submit feedback. Please try again later.');
+          }
+        });
+      });
+    </script>
     {% if request.user.is_authenticated %}
     <script>
       // Cache last fetched notifications so we can mark-as-read on open.
