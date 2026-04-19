@@ -1,9 +1,9 @@
-    path("feedback-analytics/", views.feedback_analytics, name="feedback-analytics"),
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
+        path("feedback-analytics/", views.feedback_analytics, name="feedback-analytics"),
     path("", views.home, name="web-home"),
     path("about/", views.about_view, name="web-about"),
     path("contact/", views.contact_view, name="web-contact"),
