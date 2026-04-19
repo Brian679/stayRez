@@ -39,6 +39,7 @@ urlpatterns = [
     path("auth/login/", views.login_view, name="web-login"),
     path("auth/logout/", views.logout_view, name="web-logout"),
     path("auth/profile/", views.profile_view, name="web-profile"),
+    path("feedback-analytics/", views.feedback_analytics, name="feedback-analytics"),
 
     # Password management (web)
     path("auth/password/change/", views.change_password, name="web-password-change"),
