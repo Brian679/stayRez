@@ -1,53 +1,12 @@
 from django.db import models
 
 class Feedback(models.Model):
-    # Demographic
-    name = models.CharField(max_length=100, blank=True)
-    age = models.CharField(max_length=20, blank=True)
-    gender = models.CharField(max_length=20, blank=True)
-    occupation = models.CharField(max_length=30, blank=True)
-    occupation_other = models.CharField(max_length=100, blank=True)
-    city = models.CharField(max_length=30, blank=True)
-    has_internet = models.CharField(max_length=5, blank=True)
-    online_search_freq = models.CharField(max_length=20, blank=True)
-    # Current system experience
-    current_methods = models.CharField(max_length=200, blank=True)
-    current_methods_rating = models.CharField(max_length=20, blank=True)
-    challenges = models.CharField(max_length=200, blank=True)
-    # Usability (1-5)
-    easy_to_use = models.IntegerField(null=True, blank=True)
-    user_friendly = models.IntegerField(null=True, blank=True)
-    quick_response = models.IntegerField(null=True, blank=True)
-    easy_search = models.IntegerField(null=True, blank=True)
-    # Accessibility (1-5)
-    access_anytime = models.IntegerField(null=True, blank=True)
-    works_on_device = models.IntegerField(null=True, blank=True)
-    reasonable_internet = models.IntegerField(null=True, blank=True)
-    # GIS Features (1-5)
-    map_helps = models.IntegerField(null=True, blank=True)
-    view_distance = models.IntegerField(null=True, blank=True)
-    spatial_search = models.IntegerField(null=True, blank=True)
-    visualization_clear = models.IntegerField(null=True, blank=True)
-    # Reliability (1-5)
-    info_accurate = models.IntegerField(null=True, blank=True)
-    trustworthy = models.IntegerField(null=True, blank=True)
-    up_to_date = models.IntegerField(null=True, blank=True)
-    # Satisfaction (1-5)
-    satisfied = models.IntegerField(null=True, blank=True)
-    meets_needs = models.IntegerField(null=True, blank=True)
-    recommend = models.IntegerField(null=True, blank=True)
-    # Impact (1-5)
-    better_decisions = models.IntegerField(null=True, blank=True)
-    reduces_time = models.IntegerField(null=True, blank=True)
-    improves_transparency = models.IntegerField(null=True, blank=True)
-    # Acceptance (1-5)
-    continue_using = models.IntegerField(null=True, blank=True)
-    prefer_over_traditional = models.IntegerField(null=True, blank=True)
-    # Open-ended
-    like_most = models.TextField(blank=True)
-    challenges_exp = models.TextField(blank=True)
-    improvements = models.TextField(blank=True)
+    satisfaction = models.IntegerField(null=True, blank=True)  # Overall satisfaction (1-5)
+    ease_of_use = models.IntegerField(null=True, blank=True)   # Ease of use (1-5)
+    recommend = models.IntegerField(null=True, blank=True)     # Would recommend (1-5)
+    like_most = models.TextField(blank=True)                  # What did you like most?
+    improvements = models.TextField(blank=True)               # Suggestions for improvement
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Feedback from {self.name or 'Anonymous'} at {self.submitted_at}" 
+        return f"Feedback at {self.submitted_at}" 

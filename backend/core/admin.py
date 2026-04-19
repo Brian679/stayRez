@@ -3,8 +3,8 @@ from .models import Notification, UserUniversityPreference, ContactMessage
 from .models_feedback import Feedback
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    list_display = ("name", "city", "occupation", "submitted_at")
-    search_fields = ("name", "city", "occupation")
+    list_display = ("satisfaction", "ease_of_use", "recommend", "submitted_at")
+    search_fields = ("like_most", "improvements")
 
 
 @admin.register(Notification)
