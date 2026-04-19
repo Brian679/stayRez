@@ -1,10 +1,13 @@
 from django.contrib import admin
 from .models import Notification, UserUniversityPreference, ContactMessage
 from .models_feedback import Feedback
+
+
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    list_display = ("satisfaction", "ease_of_use", "recommend", "submitted_at")
-    search_fields = ("like_most", "improvements")
+    list_display = ("name", "easy_to_use", "user_friendly", "submitted_at")
+    search_fields = ("name", "like_most", "improvements")
+    list_filter = ("age", "gender", "occupation", "city")
 
 
 @admin.register(Notification)

@@ -142,43 +142,151 @@ h2 {
     <a href="{% url 'web-home' %}">Home</a> / Feedback Analytics
   </div>
   
-  <h2>Feedback Analytics</h2>
-  
+  <div class="summary-stats" style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+    <h3 style="margin-bottom: 15px; color: #1a1a1a;">Summary</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+      <div><strong>Total Feedbacks:</strong> {{ total_feedbacks }}</div>
+      <div><strong>With Ratings:</strong> {{ feedbacks_with_ratings }}</div>
+    </div>
+  </div>
+
+  <h2>Platform Ratings</h2>
+
   <div class="analytics-grid">
     <div class="analytics-card">
-      <h3>Satisfaction Distribution</h3>
-      {% if satisfaction_data and satisfaction_data != '{}' %}
-        <div class="chart-container" id="satisfaction-chart"></div>
+      <h3>Easy to Use</h3>
+      {% if easy_to_use_data and easy_to_use_data != '{}' %}
+        <div class="chart-container" id="easy-to-use-chart"></div>
       {% else %}
-        <div class="empty-state">No satisfaction data available</div>
+        <div class="empty-state">No data available</div>
       {% endif %}
     </div>
-    
+
     <div class="analytics-card">
-      <h3>Ease of Use Distribution</h3>
-      {% if ease_of_use_data and ease_of_use_data != '{}' %}
-        <div class="chart-container" id="ease-of-use-chart"></div>
+      <h3>User Friendly Interface</h3>
+      {% if user_friendly_data and user_friendly_data != '{}' %}
+        <div class="chart-container" id="user-friendly-chart"></div>
       {% else %}
-        <div class="empty-state">No ease of use data available</div>
+        <div class="empty-state">No data available</div>
       {% endif %}
     </div>
-    
+
     <div class="analytics-card">
-      <h3>Would Recommend Distribution</h3>
-      {% if recommend_data and recommend_data != '{}' %}
-        <div class="chart-container" id="recommend-chart"></div>
+      <h3>Quick Response</h3>
+      {% if quick_response_data and quick_response_data != '{}' %}
+        <div class="chart-container" id="quick-response-chart"></div>
       {% else %}
-        <div class="empty-state">No recommend data available</div>
+        <div class="empty-state">No data available</div>
       {% endif %}
     </div>
-    
+
+    <div class="analytics-card">
+      <h3>Easy Property Search</h3>
+      {% if easy_search_data and easy_search_data != '{}' %}
+        <div class="chart-container" id="easy-search-chart"></div>
+      {% else %}
+        <div class="empty-state">No data available</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2 style="margin-top: 50px;">User Demographics</h2>
+
+  <div class="analytics-grid">
+    <div class="analytics-card">
+      <h3>Age Distribution</h3>
+      {% if age_data and age_data != '{}' %}
+        <div class="chart-container" id="age-chart"></div>
+      {% else %}
+        <div class="empty-state">No age data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Gender Distribution</h3>
+      {% if gender_data and gender_data != '{}' %}
+        <div class="chart-container" id="gender-chart"></div>
+      {% else %}
+        <div class="empty-state">No gender data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Occupation Distribution</h3>
+      {% if occupation_data and occupation_data != '{}' %}
+        <div class="chart-container" id="occupation-chart"></div>
+      {% else %}
+        <div class="empty-state">No occupation data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>City Distribution</h3>
+      {% if city_data and city_data != '{}' %}
+        <div class="chart-container" id="city-chart"></div>
+      {% else %}
+        <div class="empty-state">No city data available</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2 style="margin-top: 50px;">Usage Patterns</h2>
+
+  <div class="analytics-grid">
+    <div class="analytics-card">
+      <h3>Internet Access</h3>
+      {% if internet_data and internet_data != '{}' %}
+        <div class="chart-container" id="internet-chart"></div>
+      {% else %}
+        <div class="empty-state">No internet data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Online Search Frequency</h3>
+      {% if search_freq_data and search_freq_data != '{}' %}
+        <div class="chart-container" id="search-freq-chart"></div>
+      {% else %}
+        <div class="empty-state">No search frequency data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Current Methods Rating</h3>
+      {% if current_methods_data and current_methods_data != '{}' %}
+        <div class="chart-container" id="current-methods-chart"></div>
+      {% else %}
+        <div class="empty-state">No current methods data available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Common Challenges</h3>
+      {% if challenges_data and challenges_data != '{}' %}
+        <div class="list-container">
+          {% for item, count in challenges_data.items %}
+            <div class="list-item">
+              <span class="label">{{ item }}</span>
+              <span class="count">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">No challenge data available</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2 style="margin-top: 50px;">Text Feedback</h2>
+
+  <div class="analytics-grid">
     <div class="analytics-card">
       <h3>What Users Like Most (Top 10)</h3>
       {% if like_most_data and like_most_data != '{}' %}
         <div class="list-container">
           {% for item, count in like_most_data.items %}
             <div class="list-item">
-              <span class="label">{{ item }}</span>
+              <span class="label">{{ item|truncatechars:50 }}</span>
               <span class="count">{{ count }}</span>
             </div>
           {% endfor %}
@@ -187,14 +295,30 @@ h2 {
         <div class="empty-state">No feedback data available</div>
       {% endif %}
     </div>
-    
+
     <div class="analytics-card">
-      <h3>Areas for Improvement (Top 10)</h3>
+      <h3>Challenges Experienced (Top 10)</h3>
+      {% if challenges_exp_data and challenges_exp_data != '{}' %}
+        <div class="list-container">
+          {% for item, count in challenges_exp_data.items %}
+            <div class="list-item">
+              <span class="label">{{ item|truncatechars:50 }}</span>
+              <span class="count">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">No challenge feedback available</div>
+      {% endif %}
+    </div>
+
+    <div class="analytics-card">
+      <h3>Suggested Improvements (Top 10)</h3>
       {% if improvements_data and improvements_data != '{}' %}
         <div class="list-container">
           {% for item, count in improvements_data.items %}
             <div class="list-item">
-              <span class="label">{{ item }}</span>
+              <span class="label">{{ item|truncatechars:50 }}</span>
               <span class="count">{{ count }}</span>
             </div>
           {% endfor %}
@@ -210,36 +334,117 @@ h2 {
 function createBarChart(containerId, data) {
   const container = document.getElementById(containerId);
   if (!container) return;
-  
+
   const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
   if (!parsedData || Object.keys(parsedData).length === 0) return;
-  
+
   const maxValue = Math.max(...Object.values(parsedData));
-  
+
   Object.entries(parsedData).forEach(([label, value]) => {
     const bar = document.createElement('div');
     bar.className = 'chart-bar';
     const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
     bar.style.height = height + '%';
-    
+
     const labelEl = document.createElement('span');
     labelEl.className = 'bar-label';
     labelEl.textContent = label;
-    
+
     const valueEl = document.createElement('span');
     valueEl.className = 'bar-value';
     valueEl.textContent = value;
-    
+
     bar.appendChild(labelEl);
     bar.appendChild(valueEl);
     container.appendChild(bar);
   });
 }
 
+function createLineChart(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+  if (!parsedData || Object.keys(parsedData).length === 0) return;
+
+  // Simple line chart using CSS
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '200');
+  svg.style.overflow = 'visible';
+
+  const entries = Object.entries(parsedData);
+  const maxValue = Math.max(...Object.values(parsedData));
+  const width = container.clientWidth || 300;
+  const height = 200;
+
+  entries.forEach((entry, index) => {
+    const [label, value] = entry;
+    const x = (index / (entries.length - 1)) * width;
+    const y = height - (value / maxValue) * height;
+
+    // Point
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', '4');
+    circle.setAttribute('fill', '#4f46e5');
+    svg.appendChild(circle);
+
+    // Label
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x);
+    text.setAttribute('y', y - 10);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', '11px');
+    text.textContent = value;
+    svg.appendChild(text);
+  });
+
+  // Connect points with lines
+  for (let i = 0; i < entries.length - 1; i++) {
+    const [label1, value1] = entries[i];
+    const [label2, value2] = entries[i + 1];
+
+    const x1 = (i / (entries.length - 1)) * width;
+    const y1 = height - (value1 / maxValue) * height;
+    const x2 = ((i + 1) / (entries.length - 1)) * width;
+    const y2 = height - (value2 / maxValue) * height;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#4f46e5');
+    line.setAttribute('stroke-width', '2');
+    svg.appendChild(line);
+  }
+
+  container.appendChild(svg);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  createBarChart('satisfaction-chart', {{ satisfaction_data|safe }});
-  createBarChart('ease-of-use-chart', {{ ease_of_use_data|safe }});
-  createBarChart('recommend-chart', {{ recommend_data|safe }});
+  // Bar charts
+  createBarChart('easy-to-use-chart', {{ easy_to_use_data|safe }});
+  createBarChart('user-friendly-chart', {{ user_friendly_data|safe }});
+  createBarChart('quick-response-chart', {{ quick_response_data|safe }});
+  createBarChart('easy-search-chart', {{ easy_search_data|safe }});
+  createBarChart('age-chart', {{ age_data|safe }});
+  createBarChart('gender-chart', {{ gender_data|safe }});
+  createBarChart('occupation-chart', {{ occupation_data|safe }});
+  createBarChart('city-chart', {{ city_data|safe }});
+  createBarChart('internet-chart', {{ internet_data|safe }});
+  createBarChart('search-freq-chart', {{ search_freq_data|safe }});
+  createBarChart('current-methods-chart', {{ current_methods_data|safe }});
+
+  // Legacy charts (if data exists)
+  if ({{ satisfaction_data|safe }} && Object.keys({{ satisfaction_data|safe }}).length > 0) {
+    createBarChart('satisfaction-chart', {{ satisfaction_data|safe }});
+  }
+  if ({{ recommend_data|safe }} && Object.keys({{ recommend_data|safe }}).length > 0) {
+    createBarChart('recommend-chart', {{ recommend_data|safe }});
+  }
 });
 </script>
 {% endblock %}
