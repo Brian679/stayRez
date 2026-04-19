@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+body {
+  font-size: clamp(13px, 1.8vw + 0.5vh, 16px);
+  background: #fafafa;
+}
+
+.content-wrapper {
+  padding-top: calc(10vh + 40px);
+  padding-bottom: 5vh;
+  padding-left: clamp(8px, 4vw, 40px);
+  padding-right: clamp(8px, 4vw, 40px);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+h2 {
+  font-size: clamp(24px, 4vw + 1vh, 42px);
+  font-weight: 700;
+  margin-bottom: clamp(12px, 2vh, 20px);
+  color: #1a1a1a;
+}
+
+.breadcrumb {
+  font-size: 14px;
+  color: #717171;
+  margin-bottom: 20px;
+}
+
+.breadcrumb a {
+  color: #222;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 30px;
+}
+
+.analytics-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.analytics-card h3 {
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+}
+
+.chart-container {
+  height: 200px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.chart-bar {
+  flex: 1;
+  background: #4f46e5;
+  border-radius: 4px 4px 0 0;
+  min-height: 20px;
+  position: relative;
+  transition: height 0.3s ease;
+}
+
+.chart-bar:hover {
+  background: #4338ca;
+}
+
+.chart-bar .bar-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #717171;
+}
+
+.chart-bar .bar-value {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.list-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+.list-item .label {
+  color: #1a1a1a;
+}
+
+.list-item .count {
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #717171;
+}
+
+@media (max-width: 576px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<div class="content-wrapper">
+  <div class="breadcrumb">
+    <a href="{% url 'home' %}">Home</a> / Feedback Analytics
+  </div>
+  
+  <h2>Feedback Analytics</h2>
+  
+  <div class="analytics-grid">
+    <div class="analytics-card">
+      <h3>Satisfaction Distribution</h3>
+      {% if satisfaction_data and satisfaction_data != '{}' %}
+        <div class="chart-container" id="satisfaction-chart"></div>
+      {% else %}
+        <div class="empty-state">No satisfaction data available</div>
+      {% endif %}
+    </div>
+    
+    <div class="analytics-card">
+      <h3>Ease of Use Distribution</h3>
+      {% if ease_of_use_data and ease_of_use_data != '{}' %}
+        <div class="chart-container" id="ease-of-use-chart"></div>
+      {% else %}
+        <div class="empty-state">No ease of use data available</div>
+      {% endif %}
+    </div>
+    
+    <div class="analytics-card">
+      <h3>Would Recommend Distribution</h3>
+      {% if recommend_data and recommend_data != '{}' %}
+        <div class="chart-container" id="recommend-chart"></div>
+      {% else %}
+        <div class="empty-state">No recommend data available</div>
+      {% endif %}
+    </div>
+    
+    <div class="analytics-card">
+      <h3>What Users Like Most (Top 10)</h3>
+      {% if like_most_data and like_most_data != '{}' %}
+        <div class="list-container">
+          {% for item, count in like_most_data.items %}
+            <div class="list-item">
+              <span class="label">{{ item }}</span>
+              <span class="count">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">No feedback data available</div>
+      {% endif %}
+    </div>
+    
+    <div class="analytics-card">
+      <h3>Areas for Improvement (Top 10)</h3>
+      {% if improvements_data and improvements_data != '{}' %}
+        <div class="list-container">
+          {% for item, count in improvements_data.items %}
+            <div class="list-item">
+              <span class="label">{{ item }}</span>
+              <span class="count">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">No improvement feedback available</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function createBarChart(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+  if (!parsedData || Object.keys(parsedData).length === 0) return;
+  
+  const maxValue = Math.max(...Object.values(parsedData));
+  
+  Object.entries(parsedData).forEach(([label, value]) => {
+    const bar = document.createElement('div');
+    bar.className = 'chart-bar';
+    const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
+    bar.style.height = height + '%';
+    
+    const labelEl = document.createElement('span');
+    labelEl.className = 'bar-label';
+    labelEl.textContent = label;
+    
+    const valueEl = document.createElement('span');
+    valueEl.className = 'bar-value';
+    valueEl.textContent = value;
+    
+    bar.appendChild(labelEl);
+    bar.appendChild(valueEl);
+    container.appendChild(bar);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  createBarChart('satisfaction-chart', {{ satisfaction_data|safe }});
+  createBarChart('ease-of-use-chart', {{ ease_of_use_data|safe }});
+  createBarChart('recommend-chart', {{ recommend_data|safe }});
+});
+</script>
+{% endblock %}
