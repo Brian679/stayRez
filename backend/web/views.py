@@ -1,3 +1,26 @@
+from core.models_feedback import Feedback
+from collections import Counter
+import json
+# Feedback analytics page
+def feedback_analytics(request):
+    feedbacks = Feedback.objects.all()
+    # Distribution for satisfaction, ease_of_use, recommend
+    satisfaction = Counter(fb.satisfaction for fb in feedbacks if fb.satisfaction)
+    ease_of_use = Counter(fb.ease_of_use for fb in feedbacks if fb.ease_of_use)
+    recommend = Counter(fb.recommend for fb in feedbacks if fb.recommend)
+    # Like most and improvements (top 10)
+    like_most = Counter(fb.like_most.strip() for fb in feedbacks if fb.like_most.strip())
+    improvements = Counter(fb.improvements.strip() for fb in feedbacks if fb.improvements.strip())
+    like_most_data = dict(like_most.most_common(10))
+    improvements_data = dict(improvements.most_common(10))
+    context = {
+        'satisfaction_data': json.dumps(dict(sorted(satisfaction.items()))),
+        'ease_of_use_data': json.dumps(dict(sorted(ease_of_use.items()))),
+        'recommend_data': json.dumps(dict(sorted(recommend.items()))),
+        'like_most_data': json.dumps(like_most_data),
+        'improvements_data': json.dumps(improvements_data),
+    }
+    return render(request, 'web/feedback_analytics.html', context)
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm, PasswordResetForm

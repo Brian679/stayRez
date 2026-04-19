@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4">Feedback Analytics</h2>
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <canvas id="satisfactionChart"></canvas>
+    </div>
+    <div class="col-md-6 mb-4">
+      <canvas id="easeOfUseChart"></canvas>
+    </div>
+    <div class="col-md-6 mb-4">
+      <canvas id="recommendChart"></canvas>
+    </div>
+    <div class="col-md-6 mb-4">
+      <canvas id="likeMostBar"></canvas>
+    </div>
+    <div class="col-md-12 mb-4">
+      <canvas id="improvementsHistogram"></canvas>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Data passed from Django view
+  const satisfactionData = {{ satisfaction_data|safe }};
+  const easeOfUseData = {{ ease_of_use_data|safe }};
+  const recommendData = {{ recommend_data|safe }};
+  const likeMostData = {{ like_most_data|safe }};
+  const improvementsData = {{ improvements_data|safe }};
+
+  // Satisfaction Distribution (Bar)
+  new Chart(document.getElementById('satisfactionChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(satisfactionData),
+      datasets: [{
+        label: 'Satisfaction (1-5)',
+        data: Object.values(satisfactionData),
+        backgroundColor: 'rgba(54, 162, 235, 0.6)'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  // Ease of Use Distribution (Bar)
+  new Chart(document.getElementById('easeOfUseChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(easeOfUseData),
+      datasets: [{
+        label: 'Ease of Use (1-5)',
+        data: Object.values(easeOfUseData),
+        backgroundColor: 'rgba(255, 206, 86, 0.6)'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  // Recommend Distribution (Bar)
+  new Chart(document.getElementById('recommendChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(recommendData),
+      datasets: [{
+        label: 'Would Recommend (1-5)',
+        data: Object.values(recommendData),
+        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  // Like Most (Bar)
+  new Chart(document.getElementById('likeMostBar'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(likeMostData),
+      datasets: [{
+        label: 'What Users Liked Most',
+        data: Object.values(likeMostData),
+        backgroundColor: 'rgba(153, 102, 255, 0.6)'
+      }]
+    },
+    options: { responsive: true, indexAxis: 'y' }
+  });
+
+  // Improvements (Histogram)
+  new Chart(document.getElementById('improvementsHistogram'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(improvementsData),
+      datasets: [{
+        label: 'Suggestions for Improvement',
+        data: Object.values(improvementsData),
+        backgroundColor: 'rgba(255, 99, 132, 0.6)'
+      }]
+    },
+    options: { responsive: true, indexAxis: 'y' }
+  });
+</script>
+{% endblock %}
