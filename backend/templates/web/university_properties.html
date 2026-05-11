@@ -596,12 +596,9 @@ html {
     <div class="input-group">
       <input type="text" class="form-control search-input" name="q" placeholder="🔍 Search location, amenities, price (e.g., 200) or distance (e.g., 2km)" value="{{ request.GET.q }}">
       <button class="btn btn-primary search-btn" type="submit">Search</button>
-    </div>
-
-    {% if request.GET.gender %}<input type="hidden" name="gender" value="{{ request.GET.gender }}">{% endif %}
-    {% if request.GET.sharing %}<input type="hidden" name="sharing" value="{{ request.GET.sharing }}">{% endif %}
-    {% if request.GET.overnight %}<input type="hidden" name="overnight" value="{{ request.GET.overnight }}">{% endif %}
-    {% if request.GET.min_price %}<input type="hidden" name="min_price" value="{{ request.GET.min_price }}">{% endif %}
+        <a href="{% url 'web-map' %}" class="btn btn-secondary text-white" style="border-radius: 25px; margin-left: 8px; display: flex; align-items: center; justify-content: center;" title="View Map">
+          <i class="fas fa-map-marked-alt"></i>
+        </a>
     {% if request.GET.max_price %}<input type="hidden" name="max_price" value="{{ request.GET.max_price }}">{% endif %}
     {% if request.GET.order %}<input type="hidden" name="order" value="{{ request.GET.order }}">{% endif %}
     {% if request.GET.lat %}<input type="hidden" name="lat" value="{{ request.GET.lat }}">{% endif %}
