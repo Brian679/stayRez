@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Map View</h2>
+        <a href="{% url 'web-home' %}" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-2"></i>Back to Home</a>
+    </div>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <div class="card shadow-sm border-0 border-radius-lg">
+        <div class="card-body p-0">
+            <div id="propertiesMap" style="height: 600px; width: 100%; border-radius: 0.5rem;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initialize map centered roughly on Zimbabwe
+        var map = L.map('propertiesMap').setView([-19.0154, 29.1548], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        }).addTo(map);
+
+        var bounds = [];
+        
+        {% for prop in properties %}
+            {% if prop.latitude and prop.longitude %}
+                var marker = L.marker([{{ prop.latitude }}, {{ prop.longitude }}]).addTo(map)
+                    .bindPopup(`
+                        <strong>{{ prop.title|escapejs }}</strong><br>
+                        {{ prop.city|escapejs }}<br>
+                        Price: ${{ prop.price_per_month|default:prop.nightly_price|default:"N/A" }}<br>
+                        <a href="{% url 'web-property-detail' prop.id %}">View Details</a>
+                    `);
+                bounds.push([{{ prop.latitude }}, {{ prop.longitude }}]);
+            {% endif %}
+        {% endfor %}
+
+        if (bounds.length > 0) {
+            map.fitBounds(bounds);
+        }
+    });
+</script>
+{% endblock %}

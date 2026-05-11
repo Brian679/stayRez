@@ -64,6 +64,7 @@ urlpatterns = [
         name="web-password-reset-complete",
     ),
     path("api/properties/<int:property_id>/toggle-like/", views.toggle_property_like, name="toggle-property-like"),
+    path("map/", views.map_view, name="web-map"),
 
     # --- Slug-driven service routes (preferred)
     # These must be last to avoid capturing fixed prefixes like /property/, /auth/, /dashboard/.

@@ -1677,3 +1677,9 @@ def toggle_property_like(request, property_id):
         return JsonResponse({"liked": True})
     except Property.DoesNotExist:
         return JsonResponse({"error": "Property not found"}, status=404)
+
+
+def map_view(request):
+    properties = Property.objects.filter(is_approved=True, is_available=True).exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    return render(request, 'web/map.html', {'properties': properties})
+
